@@ -4,7 +4,7 @@ import { categories, categoryMap } from './data/categories'
 
 const LETTERS = ['أ', 'ب', 'ج', 'د']
 const STORAGE_KEY = 'maaref-progress-v1'
-const AUTO_ADVANCE_MS = 5_000
+const AUTO_ADVANCE_MS = 3_000
 
 const emptyStats = {
   answered: 0,
