@@ -1,5 +1,7 @@
-const CACHE_NAME = 'maaref-shell-v1'
-const APP_SHELL = ['/', '/manifest.webmanifest', '/maaref-mark.svg']
+const CACHE_NAME = 'maaref-shell-v2'
+const scopePath = new URL(self.registration.scope).pathname
+const BASE = scopePath.endsWith('/') ? scopePath : `${scopePath}/`
+const APP_SHELL = [BASE, `${BASE}manifest.webmanifest`, `${BASE}maaref-mark.svg`]
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)))
@@ -14,12 +16,16 @@ self.addEventListener('activate', (event) => {
 })
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return
+  const url = new URL(event.request.url)
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return
+
   event.respondWith(
     caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
-      const copy = response.clone()
-      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy))
+      if (response.ok) {
+        const copy = response.clone()
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy))
+      }
       return response
-    })),
+    }).catch(() => event.request.mode === 'navigate' ? caches.match(BASE) : undefined)),
   )
 })
