@@ -4,6 +4,7 @@ import { categories, categoryMap } from './data/categories'
 
 const LETTERS = ['أ', 'ب', 'ج', 'د']
 const STORAGE_KEY = 'maaref-progress-v1'
+const PWA_INSTALL_DISMISSED_KEY = 'maaref-pwa-install-dismissed-v1'
 const AUTO_ADVANCE_MS = 3_000
 
 const emptyStats = {
@@ -336,6 +337,92 @@ function Brand({ compact = false }) {
   )
 }
 
+function isAppleMobileDevice() {
+  if (typeof navigator === 'undefined') return false
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
+function isStandaloneApp() {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true
+}
+
+function InstallAppBanner({ onToast }) {
+  const [deferredPrompt, setDeferredPrompt] = useState(null)
+  const [isAppleMobile] = useState(isAppleMobileDevice)
+  const [isInstalled, setIsInstalled] = useState(isStandaloneApp)
+  const [isDismissed, setIsDismissed] = useState(() => {
+    try {
+      return window.localStorage.getItem(PWA_INSTALL_DISMISSED_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
+  const [showIosInstructions, setShowIosInstructions] = useState(false)
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (event) => {
+      event.preventDefault()
+      setDeferredPrompt(event)
+    }
+    const handleInstalled = () => {
+      setIsInstalled(true)
+      setDeferredPrompt(null)
+      onToast('تمت إضافة معارف إلى تطبيقات جهازك.')
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleInstalled)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleInstalled)
+    }
+  }, [onToast])
+
+  const dismiss = () => {
+    setIsDismissed(true)
+    try {
+      window.localStorage.setItem(PWA_INSTALL_DISMISSED_KEY, 'true')
+    } catch {
+      // The install card can still be dismissed when storage is unavailable.
+    }
+  }
+
+  const requestInstall = async () => {
+    if (isAppleMobile) {
+      setShowIosInstructions((current) => !current)
+      return
+    }
+    if (!deferredPrompt) return
+
+    try {
+      await deferredPrompt.prompt()
+      const choice = await deferredPrompt.userChoice
+      setDeferredPrompt(null)
+      if (choice.outcome === 'accepted') onToast('يجري تثبيت معارف على جهازك.')
+    } catch {
+      setDeferredPrompt(null)
+    }
+  }
+
+  if (isInstalled || isDismissed || (!deferredPrompt && !isAppleMobile)) return null
+
+  return (
+    <aside className="install-banner" aria-label="تثبيت تطبيق معارف">
+      <span className="install-banner__icon" aria-hidden="true">📲</span>
+      <div className="install-banner__copy">
+        <strong>ثبّت معارف كتطبيق</strong>
+        <p>{isAppleMobile ? 'أضِفه إلى الشاشة الرئيسية لفتحه كتطبيق مستقل.' : 'افتحه سريعًا كتطبيق مستقل واستمر في التعلّم حتى عند انقطاع الإنترنت.'}</p>
+        {isAppleMobile && showIosInstructions && <p className="install-banner__instructions"><b>على آيفون أو آيباد:</b> افتح زر المشاركة، ثم اختر «إضافة إلى الشاشة الرئيسية»، وبعدها «إضافة».</p>}
+      </div>
+      <div className="install-banner__actions">
+        <button className="button button--primary" type="button" onClick={requestInstall}>{isAppleMobile ? 'طريقة الإضافة' : 'تثبيت التطبيق'} <span>↓</span></button>
+        <button className="install-banner__close" type="button" onClick={dismiss} aria-label="إغلاق اقتراح تثبيت معارف">×</button>
+      </div>
+    </aside>
+  )
+}
+
 function App() {
   const [view, setView] = useState('home')
   const [stats, setStats] = useState(readStats)
@@ -634,6 +721,7 @@ function App() {
         </nav>
       )}
 
+      {view === 'home' && <InstallAppBanner onToast={setToast} />}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   )

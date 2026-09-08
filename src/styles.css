@@ -176,4 +176,20 @@ h1 em { color: #6a56d6; font-style: normal; }
   .toast { font-size: 13px; }
 }
 
+/* PWA installation is discoverable without interrupting a quiz. */
+.install-banner { position: fixed; z-index: 45; bottom: 24px; left: 24px; width: min(438px, calc(100% - 48px)); padding: 14px; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; border: 1px solid rgba(105, 84, 208, .18); border-radius: 18px; color: #40385b; background: rgba(255,255,255,.96); box-shadow: 0 20px 48px rgba(44, 34, 99, .2); backdrop-filter: blur(16px); animation: reveal .38s ease both; }
+.install-banner__icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; background: linear-gradient(135deg, #eeeaff, #dcf8ed); font-size: 22px; }
+.install-banner__copy { min-width: 0; }.install-banner__copy strong { display: block; color: #413860; font-size: 13px; }.install-banner__copy p { margin: 4px 0 0; color: #777087; font-size: 11px; line-height: 1.7; }.install-banner__instructions { padding: 7px 9px; border-radius: 9px; color: #5e5782 !important; background: #f4f1ff; }.install-banner__instructions b { color: #5546ba; }
+.install-banner__actions { display: flex; align-items: center; gap: 5px; }.install-banner .button { min-height: 42px; padding-inline: 12px; font-size: 11px; white-space: nowrap; }.install-banner__close { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; color: #817991; background: transparent; font-size: 22px; line-height: 1; }.install-banner__close:hover { color: #5848ba; background: #f0edff; }
+
+@media (max-width: 680px) {
+  .install-banner { right: 14px; bottom: 84px; left: 14px; width: auto; padding: 12px; grid-template-columns: 42px minmax(0, 1fr); gap: 10px; border-radius: 17px; }
+  .install-banner__icon { width: 42px; height: 42px; font-size: 21px; }
+  .install-banner__copy strong { font-size: 14px; }
+  .install-banner__copy p { font-size: 12px; line-height: 1.75; }
+  .install-banner__actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 42px; gap: 8px; }
+  .install-banner .button { min-height: 47px; width: 100%; font-size: 13px; }
+  .install-banner__close { width: 42px; height: 47px; }
+}
+
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .001ms !important; } }

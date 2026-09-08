@@ -1,14 +1,36 @@
 {
+  "id": "./",
   "name": "معارف | تحدّي المعرفة",
   "short_name": "معارف",
-  "description": "منصة عربية تفاعلية لتعلّم المعلومات العامة واختبارها.",
-  "start_url": "/",
+  "description": "منصة عربية تفاعلية لتعلّم المعلومات العامة واختبارها، تعمل كتطبيق على جهازك.",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#17123A",
   "theme_color": "#17123A",
   "lang": "ar",
   "dir": "rtl",
+  "categories": ["education", "games"],
+  "prefer_related_applications": false,
   "icons": [
-    { "src": "/maaref-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
