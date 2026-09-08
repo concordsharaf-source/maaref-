@@ -4,6 +4,7 @@ import { categories, categoryMap } from './data/categories'
 
 const LETTERS = ['أ', 'ب', 'ج', 'د']
 const STORAGE_KEY = 'maaref-progress-v1'
+const AUTO_ADVANCE_MS = 5_000
 
 const emptyStats = {
   answered: 0,
@@ -390,6 +391,8 @@ function App() {
       correctCount: 0,
       answeredCount: 0,
       selectedAnswer: '',
+      autoAdvanceUntil: 0,
+      autoAdvanceRemaining: 0,
       questions: rounds,
       config: { mode, category, count, duration, daily },
     })
@@ -438,10 +441,13 @@ function App() {
     const correct = sameAnswer(answer, current.answer)
     const timeBonus = session.duration ? Math.min(50, Math.max(0, Math.floor(session.secondsLeft / 6))) : 0
     const earned = correct ? 100 + timeBonus : 0
+    const autoAdvanceUntil = Date.now() + AUTO_ADVANCE_MS
 
     setSession((previous) => previous ? {
       ...previous,
       selectedAnswer: answer,
+      autoAdvanceUntil,
+      autoAdvanceRemaining: AUTO_ADVANCE_MS,
       score: previous.score + earned,
       correctCount: previous.correctCount + (correct ? 1 : 0),
       answeredCount: previous.answeredCount + 1,
@@ -475,8 +481,32 @@ function App() {
       ...previous,
       currentIndex: previous.currentIndex + 1,
       selectedAnswer: '',
+      autoAdvanceUntil: 0,
+      autoAdvanceRemaining: 0,
     } : previous)
   }
+
+  // بعد الإجابة يبدأ عداد مرئي من خمس ثوان؛ يبقى زر «التالي» متاحًا للانتقال الفوري.
+  useEffect(() => {
+    if (!session?.selectedAnswer || !session.autoAdvanceUntil) return undefined
+
+    let hasAdvanced = false
+    const tick = () => {
+      const remaining = Math.max(0, session.autoAdvanceUntil - Date.now())
+      setSession((current) => {
+        if (!current || current.autoAdvanceUntil !== session.autoAdvanceUntil) return current
+        return { ...current, autoAdvanceRemaining: remaining }
+      })
+      if (remaining <= 0 && !hasAdvanced) {
+        hasAdvanced = true
+        nextQuestion()
+      }
+    }
+
+    tick()
+    const countdown = window.setInterval(tick, 100)
+    return () => window.clearInterval(countdown)
+  }, [session?.selectedAnswer, session?.currentIndex, session?.autoAdvanceUntil])
 
   const abandonSession = () => {
     if (window.confirm('هل تريد إنهاء هذه الجلسة دون حفظ نتيجتها؟')) {
@@ -843,6 +873,10 @@ function QuizView({ session, answerQuestion, nextQuestion, abandonSession }) {
     sprint: 'تحدي البرق',
     daily: 'تحدي اليوم',
   }[session.mode] || 'جلسة معرفة'
+  const autoAdvancePercent = selected
+    ? Math.max(0, Math.min(100, (session.autoAdvanceRemaining / AUTO_ADVANCE_MS) * 100))
+    : 0
+  const secondsToNext = Math.max(1, Math.ceil(session.autoAdvanceRemaining / 1000))
 
   return (
     <div className="quiz-shell">
@@ -872,6 +906,7 @@ function QuizView({ session, answerQuestion, nextQuestion, abandonSession }) {
             })}
           </div>
           {selected && <div className={`answer-feedback ${isCorrect ? 'is-correct' : 'is-wrong'}`}><span>{isCorrect ? '🎉' : '💡'}</span><div><b>{isCorrect ? 'إجابة رائعة!' : 'ليست الإجابة الصحيحة هذه المرة.'}</b><p>{isCorrect ? 'أحسنت، أضفت نقاطًا جديدة إلى رصيدك.' : <>الإجابة الصحيحة: <strong>{current.answer}</strong></>}</p></div></div>}
+          {selected && <div className="auto-advance" role="status" aria-live="polite"><div className="auto-advance__row"><span>سيتم الانتقال تلقائيًا إلى السؤال التالي</span><b>خلال {formatNumber(secondsToNext)} ثوانٍ</b></div><div className="auto-advance__bar"><i style={{ width: `${autoAdvancePercent}%` }} /></div></div>}
         </section>
 
         <div className="quiz-actions"><div><span>{session.duration ? 'سرعة إجابتك تمنحك نقاطًا إضافية' : 'خذ وقتك وفكّر بهدوء'}</span></div>{selected && <button className="button button--primary" type="button" onClick={nextQuestion}>{session.currentIndex + 1 === session.questions.length ? 'عرض النتيجة' : 'السؤال التالي'} <span>←</span></button>}</div>
