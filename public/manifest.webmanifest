@@ -1,0 +1,14 @@
+{
+  "name": "معارف | تحدّي المعرفة",
+  "short_name": "معارف",
+  "description": "منصة عربية تفاعلية لتعلّم المعلومات العامة واختبارها.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#17123A",
+  "theme_color": "#17123A",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    { "src": "/maaref-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
