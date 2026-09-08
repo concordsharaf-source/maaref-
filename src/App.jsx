@@ -78,42 +78,245 @@ function isQuizReady(question) {
   return answer.length > 0 && answer.length <= 120 && String(question.question || '').length <= 260
 }
 
-function createRound(question, pool, random) {
+function normalizeQuestion(value = '') {
+  return String(value)
+    .toLocaleLowerCase('ar')
+    .replace(/[ًٌٍَُِّْـ]/g, '')
+    .replace(/[؟?]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function inferScienceTopic(text) {
+  if (/(ذرة|عنصر|جزيء|ايون|أيون|بروتون|نيوترون|الكترون|إلكترون|نواة|نظير|رابطة)/.test(text)) return 'chemistry'
+  if (/(خلية|نسيج|عضو|جهاز حيوي|حمض نووي|كروموسوم|جين|انقسام|لقاح|مناعة|بكتيريا|فيروس|فطريات)/.test(text)) return 'biology'
+  if (/(نظام بيئي|سلسلة غذائية|منتج|مستهلك|محلل|تنوع حيوي|احتباس|اوزون|أوزون)/.test(text)) return 'environment'
+  if (/(مجرة|نجم|كوكب|قمر طبيعي|مذنب|كويكب|ثقب اسود|ثقب أسود|سديم|سنة ضوئية|نظام شمسي)/.test(text)) return 'astronomy'
+  return 'physics'
+}
+
+function inferNatureTopic(text) {
+  if (/(تلقيح|بذرة|جذر|ساق|ورقة|زهرة|ثمرة|نبات|نباتات|حبوب اللقاح)/.test(text)) return 'plant'
+  if (/(ثدييات|طيور|زواحف|برمائيات|اسماك|أسماك|حشرات|عنكبيات|رخويات|قشريات|فقاريات|لافقاريات|تمويه|هجرة حيوانية|بيات شتوي|موطن طبيعي|حيوان|حيوانات)/.test(text)) return 'animal'
+  if (/(الجهاز|دماغ|قلب|رئت|كبد|كليت|معدة|امعاء|أمعاء|بنكرياس|طحال|عين|اذن|أذن|انف|أنف|لسان|جلد|عظام|عضلات|دم|خلايا الدم)/.test(text)) return 'body'
+  return 'ecology'
+}
+
+// يحدد نوع الإجابة المطلوب من صياغة السؤال، فلا تختلط العملات بالعواصم أو التعريفات بالأسماء.
+function inferAnswerKind({ question, category, answer = '' }) {
+  const text = normalizeQuestion(question)
+  const answerText = normalizeQuestion(answer)
+
+  if (text.includes('صح أم خطأ')) return 'boolean'
+  if (category === 'math') return 'math-number'
+
+  if (category === 'geography') {
+    if (text.includes('عملة')) return 'currency'
+    if (text.includes('عاصمة لأي دولة') || text.includes('في أي دولة تقع') || text.includes('دولة يمر بها')) return 'country'
+    if (text.includes('في أي قارة')) return 'continent'
+    if (text.includes('لغة رسمية')) return 'official-language'
+    if (text.includes('عاصمة')) return 'capital'
+    return 'geography-general'
+  }
+
+  if (category === 'science') {
+    if (text.includes('الرمز الكيميائي')) return text.includes('ما اسم العنصر') ? 'element' : 'chemical-symbol'
+    if (text.includes('العدد الذري')) return text.includes('ما العنصر') ? 'element' : 'atomic-number'
+    const scienceTopic = inferScienceTopic(`${text} ${answerText}`)
+    if (text.includes('ما المقصود بمصطلح')) return `science-${scienceTopic}-definition`
+    if (text.includes('ما المصطلح العلمي')) return `science-${scienceTopic}-term`
+    return 'science-general'
+  }
+
+  if (category === 'arts') {
+    if (text.includes('مؤلف كتاب')) return 'book-author'
+    if (text.includes('اذكر كتاب')) return 'book-title'
+    if (text.includes('الفنان الذي أنجز لوحة')) return 'artist'
+    if (text.includes('اذكر لوحة')) return 'painting'
+    return 'arts-general'
+  }
+
+  if (category === 'culture') {
+    if (text.includes('مخرج فيلم')) return 'film-director'
+    if (text.includes('اذكر فيلم')) return 'film-title'
+    return 'culture-general'
+  }
+
+  if (category === 'history') {
+    if (text.includes('ما المقصود بمصطلح')) return 'history-definition'
+    if (text.includes('ما المفهوم')) return 'history-term'
+    if (text.includes('في أي عام')) return 'history-year'
+    if (text.includes('من ينسب إليه')) return 'inventor'
+    if (text.includes('اذكر ابتكار')) return 'invention'
+    return 'history-general'
+  }
+
+  if (category === 'technology') {
+    if (text.includes('ما المقصود بمصطلح')) return 'technology-definition'
+    if (text.includes('ما المصطلح التقني')) return 'technology-term'
+    return 'technology-general'
+  }
+
+  if (category === 'language') {
+    if (text.includes('ما المقصود بمصطلح')) return 'language-definition'
+    if (text.includes('ما المصطلح النحوي أو البلاغي')) return 'language-term'
+    return 'language-general'
+  }
+
+  if (category === 'sports') {
+    if (text.includes('ما المقصود بمصطلح')) return 'sports-definition'
+    if (text.includes('ما المصطلح الرياضي')) return 'sports-term'
+    return 'sports-general'
+  }
+
+  if (category === 'nature') {
+    if (text.includes('إلى أي مجموعة حيوانية')) return 'animal-group'
+    if (text.includes('ما نمط تغذية')) return 'animal-diet'
+    if (text.includes('ما البيئة الشائعة')) return 'animal-habitat'
+    if (text.includes('ما الوظيفة الأساسية')) return 'body-function'
+    if (text.includes('أي عضو أو جزء من الجسم')) return 'body-organ'
+    const natureTopic = inferNatureTopic(`${text} ${answerText}`)
+    if (text.includes('ما المقصود بمصطلح')) return `nature-${natureTopic}-definition`
+    if (text.includes('ما المصطلح العلمي')) return `nature-${natureTopic}-term`
+    return 'nature-general'
+  }
+
+  if (category === 'religion') {
+    if (text.includes('كم عدد أركان')) return 'religion-pillars-number'
+    if (text.includes('كم عدد الصلوات')) return 'religion-prayer-count'
+    if (text.includes('كم عدد أشهر')) return 'religion-month-count'
+    if (text.includes('إلى كم جزء')) return 'religion-quran-parts'
+    if (text.includes('كم يومًا')) return 'religion-ramadan-days'
+    if (text.includes('كم ركعة')) return 'religion-rakah-count'
+    if (text.includes('في أي يوم من ذي الحجة')) return 'religion-arafah-day'
+    if (text.startsWith('كم ')) return 'religion-number'
+    if (text.includes('في أي مدينة') || text.includes('إلى أي مدينة')) return 'religion-city'
+    if (text.includes('في أي شهر') || text.includes('ما الشهر') || text.includes('ما أول شهور')) return 'religion-month'
+    if (text.includes('ما العيد')) return 'religion-eid'
+    if (text.includes('ما السورة') || text.includes('ما أول سورة') || text.includes('ما أطول سورة') || text.includes('ما السورتان')) return 'religion-surah'
+    if (text.includes('أي نبي') || text.startsWith('من هو') || text.startsWith('من هي') || text.includes('أول البشر') || text.includes('زوجة آدم') || text.includes('ابن إبراهيم') || text.includes('أم النبي')) return 'religion-person'
+    if (text.includes('ما المسجد') || text.includes('من أي مسجد') || text.includes('أي مسجد') || text.includes('أول مسجد') || text.includes('القبلة الأولى')) return 'religion-mosque'
+    if (text.includes('ما الركن')) return 'religion-pillar'
+    if (text.includes('إلى أي جهة')) return 'religion-direction'
+    if (text.includes('ما الكتاب')) return 'religion-book'
+    if (text.includes('بأي لغة')) return 'religion-language'
+    if (text.includes('بأي حدث') || text.includes('الرحلة الليلية')) return 'religion-event'
+    if (text.includes('البئر')) return 'religion-well'
+    if (text.includes('ما اسم الليلة')) return 'religion-night'
+    if (text.includes('في أي يوم') || text.includes('ما اليوم') || text.includes('في أي فترة') || text.startsWith('متى ')) return 'religion-time'
+    if (text.includes('ما اسم الشخص') || text.includes('الاسم الذي يطلق على')) return 'religion-role'
+    if (text.includes('ما العبارة') || text.includes('ما الدعاء')) return 'religion-phrase'
+    if (text.includes('ما نوع التقويم')) return 'religion-calendar'
+    if (text.includes('ما الشرط')) return 'religion-condition'
+    if (text.includes('ما الذي يمتنع')) return 'religion-fasting'
+    if (text.includes('ما السلوك')) return 'religion-value'
+    if (text.includes('ما النداء')) return 'religion-call'
+    if (text.includes('بين أي موضعين')) return 'religion-place'
+    if (text.includes('ما الطهارة') || text.includes('ما اسم الدوران') || text.includes('ما اسم الحالة') || text.includes('ما اسم الانحناء') || text.includes('ما اسم وضع')) return 'religion-practice'
+    if (text.includes('ما المقصود')) return 'religion-definition'
+    return 'religion-general'
+  }
+
+  return `${category}-general`
+}
+
+// بدائل احتياطية مدققة لنوع الإجابة. لا نستخدم بدائل عشوائية من فئة مختلفة.
+const fallbackOptions = {
+  boolean: ['صحيح.', 'خطأ.'],
+  currency: ['الريال السعودي', 'الدينار الكويتي', 'الجنيه المصري', 'الدرهم الإماراتي', 'الين الياباني', 'اليورو', 'الدولار الأمريكي', 'الليرة التركية', 'الفرنك السويسري'],
+  country: ['مصر', 'السعودية', 'فرنسا', 'اليابان', 'كندا', 'المغرب', 'تركيا', 'البرازيل', 'الهند', 'أستراليا'],
+  capital: ['القاهرة', 'الرياض', 'باريس', 'طوكيو', 'أوتاوا', 'الرباط', 'أنقرة', 'برازيليا', 'نيودلهي', 'كانبرا'],
+  continent: ['آسيا', 'أفريقيا', 'أوروبا', 'أمريكا الشمالية', 'أمريكا الجنوبية', 'أوقيانوسيا', 'القارة القطبية الجنوبية'],
+  'official-language': ['اللغة العربية', 'اللغة الإنجليزية', 'اللغة الفرنسية', 'اللغة الإسبانية', 'اللغة البرتغالية', 'اللغة الألمانية'],
+  'chemical-symbol': ['H', 'O', 'C', 'Fe', 'Au', 'Ag', 'Na', 'Cl', 'Ca', 'He'],
+  element: ['الهيدروجين', 'الأكسجين', 'الكربون', 'الحديد', 'الذهب', 'الفضة', 'الصوديوم', 'الكلور', 'الكالسيوم', 'الهيليوم'],
+  'atomic-number': ['1', '2', '6', '8', '11', '17', '20', '26', '47', '79'],
+  'history-year': ['1215', '1453', '1492', '1776', '1789', '1914', '1918', '1945', '1969', '1989'],
+  inventor: ['ألكسندر غراهام بيل', 'توماس إديسون', 'يوهانس غوتنبرغ', 'جيمس واط', 'الأخوان رايت', 'غولييلمو ماركوني'],
+  invention: ['الهاتف', 'المصباح الكهربائي العملي', 'الطباعة بالحروف المتحركة', 'المحرك البخاري المحسن', 'الراديو', 'التلغراف'],
+  'animal-group': ['الثدييات', 'الطيور', 'الزواحف', 'البرمائيات', 'الأسماك', 'الحشرات', 'العنكبيات', 'الرخويات', 'القشريات'],
+  'animal-diet': ['آكل لحوم', 'آكل نباتات', 'قارت', 'يتغذى على الحشرات غالبًا', 'يتغذى على كائنات مائية صغيرة'],
+  'animal-habitat': ['السهول الإفريقية', 'غابات آسيا', 'الصحارى', 'البحار والمحيطات', 'الغابات', 'أستراليا', 'المناطق الرطبة'],
+  'religion-number': ['خمسة', 'أربعة', 'ستة', 'سبعة'],
+  'religion-pillars-number': ['خمسة', 'أربعة', 'ستة', 'سبعة'],
+  'religion-prayer-count': ['خمس صلوات', 'أربع صلوات', 'ست صلوات', 'سبع صلوات'],
+  'religion-month-count': ['اثنا عشر شهرًا', 'عشرة أشهر', 'أحد عشر شهرًا', 'ثلاثة عشر شهرًا'],
+  'religion-quran-parts': ['ثلاثون جزءًا', 'عشرون جزءًا', 'أربعون جزءًا', 'ستون جزءًا'],
+  'religion-ramadan-days': ['تسعة وعشرون أو ثلاثون يومًا', 'ثمانية وعشرون يومًا', 'واحد وثلاثون يومًا', 'ثلاثون أو واحد وثلاثون يومًا'],
+  'religion-rakah-count': ['ركعتان', 'ثلاث ركعات', 'أربع ركعات', 'خمس ركعات'],
+  'religion-arafah-day': ['اليوم التاسع', 'اليوم الثامن', 'اليوم العاشر', 'اليوم السابع'],
+  'religion-city': ['مكة المكرمة', 'المدينة المنورة', 'القدس', 'الطائف', 'جدة'],
+  'religion-month': ['محرم', 'رمضان', 'شوال', 'ذو الحجة', 'صفر', 'ربيع الأول', 'رجب'],
+  'religion-eid': ['عيد الفطر', 'عيد الأضحى'],
+  'religion-surah': ['سورة الفاتحة', 'سورة البقرة', 'سورة الإخلاص', 'سورة مريم', 'سورتا الفلق والناس'],
+  'religion-person': ['النبي محمد صلى الله عليه وسلم', 'نوح عليه السلام', 'إبراهيم عليه السلام', 'موسى عليه السلام', 'عيسى عليه السلام', 'يوسف عليه السلام', 'يونس عليه السلام', 'مريم عليها السلام'],
+  'religion-mosque': ['المسجد الحرام', 'المسجد النبوي', 'المسجد الأقصى', 'مسجد قباء'],
+  'religion-pillar': ['الشهادتان', 'الصلاة', 'الزكاة', 'الصيام', 'الحج'],
+  'religion-direction': ['الكعبة المشرفة', 'المسجد الأقصى'],
+  'religion-book': ['القرآن الكريم', 'التوراة', 'الإنجيل', 'الزبور'],
+  'religion-language': ['اللغة العربية', 'اللغة العبرية', 'اللغة السريانية', 'اللغة الآرامية'],
+  'religion-event': ['هجرة النبي محمد إلى المدينة المنورة', 'الإسراء', 'المعراج', 'فتح مكة'],
+  'religion-well': ['بئر زمزم', 'بئر رومة', 'بئر أريس'],
+  'religion-time': ['العشر الأواخر', 'اليوم التاسع', 'يوم الجمعة', 'عند طلوع الفجر', 'بعد غروب الشمس', 'قبل صلاة عيد الفطر'],
+  'religion-role': ['المؤذن', 'الإمام', 'الخطيب', 'المعتكف'],
+  'religion-phrase': ['بسم الله الرحمن الرحيم', 'الشهادتان', 'السلام عليكم', 'سبحان الله'],
+  'religion-calendar': ['التقويم القمري', 'التقويم الشمسي', 'التقويم الميلادي'],
+  'religion-condition': ['الاستطاعة', 'الإسلام', 'البلوغ', 'العقل'],
+  'religion-fasting': ['المفطرات', 'الصيام', 'الإمساك', 'السحور'],
+  'religion-value': ['التقوى', 'الإخلاص', 'الصبر', 'الصدق'],
+  'religion-call': ['الأذان', 'الإقامة', 'التلبية', 'التكبير'],
+  'religion-place': ['الصفا والمروة', 'عرفات ومزدلفة', 'منى وعرفات', 'بئر زمزم'],
+  'religion-night': ['ليلة القدر', 'ليلة الإسراء والمعراج', 'ليلة النصف من شعبان'],
+  'religion-practice': ['الوضوء', 'الطواف', 'السعي', 'الإحرام', 'الركوع', 'السجود'],
+  'religion-definition': ['الجهة التي يتوجه إليها المسلم في الصلاة', 'الإقرار بوحدانية الله ورسالة محمد'],
+}
+
+const enrichedQuestionBank = questionBank.map((question) => ({
+  ...question,
+  answerKind: inferAnswerKind(question),
+}))
+
+const answerPools = enrichedQuestionBank.reduce((pools, question) => {
+  const answer = String(question.answer || '').trim()
+  if (!answer || answer.length > 120) return pools
+  const answers = pools.get(question.answerKind) || []
+  if (!answers.some((item) => sameAnswer(item, answer))) answers.push(answer)
+  pools.set(question.answerKind, answers)
+  return pools
+}, new Map())
+
+function uniqueRelatedAnswers(question) {
   const expected = String(question.answer).trim()
-  const isTrueFalse = question.question.includes('صح أم خطأ')
+  const options = [
+    ...(answerPools.get(question.answerKind) || []),
+    ...(fallbackOptions[question.answerKind] || []),
+  ]
+  const seen = new Set()
+  return options.filter((answer) => {
+    const trimmed = String(answer || '').trim()
+    const key = cleanAnswer(trimmed)
+    if (!trimmed || trimmed.length > 120 || !key || sameAnswer(trimmed, expected) || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
 
-  if (isTrueFalse) {
-    return {
-      ...question,
-      options: shuffle(['صحيح.', 'خطأ.'], random),
-    }
-  }
-
-  const optionsByKey = new Map()
-  for (const candidate of pool) {
-    const answer = String(candidate.answer || '').trim()
-    const key = cleanAnswer(answer)
-    if (answer && answer.length <= 120 && key && !optionsByKey.has(key)) {
-      optionsByKey.set(key, answer)
-    }
-  }
-  const wrongOptions = shuffle(
-    [...optionsByKey.values()].filter((answer) => !sameAnswer(answer, expected)),
-    random,
-  ).slice(0, 3)
-
+function createRound(question, random) {
+  const expected = String(question.answer).trim()
+  const wrongOptions = shuffle(uniqueRelatedAnswers(question), random).slice(0, 3)
   return {
     ...question,
+    // قد يظهر خياران أو ثلاثة فقط عندما لا توجد بدائل صحيحة من المجال نفسه؛ هذا أفضل من خيار غير ذي صلة.
     options: shuffle([expected, ...wrongOptions], random),
   }
 }
 
 function createQuestions({ category = 'all', count = 10, daily = false }) {
-  const matching = questionBank.filter((question) => category === 'all' || question.category === category)
-  const pool = matching.filter(isQuizReady)
+  const matching = enrichedQuestionBank.filter((question) => category === 'all' || question.category === category)
+  const pool = matching.filter(isQuizReady).filter((question) => uniqueRelatedAnswers(question).length > 0)
   const random = daily ? seededRandom(`${todayKey()}-${category}-${count}`) : Math.random
   const selected = shuffle(pool, random).slice(0, Math.min(count, pool.length))
-  return selected.map((question) => createRound(question, pool, random))
+  return selected.map((question) => createRound(question, random))
 }
 
 function Icon({ children, className = '' }) {
