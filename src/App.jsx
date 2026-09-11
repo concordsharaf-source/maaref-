@@ -100,7 +100,7 @@ function formatNumber(value) {
 function formatTime(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
-  return `${formatNumber(minutes)}:${String(seconds).padStart(2, '0')}`
+  return `${formatNumber(minutes)}:${formatNumber(seconds).padStart(2, '٠')}`
 }
 
 function todayKey() {
@@ -444,19 +444,253 @@ function createQuestions({ category = 'all', count = 10, daily = false, excluded
   return selectProgressiveQuestions(pool, count, random).map((question) => createRound(question, random))
 }
 
-function Icon({ children, className = '' }) {
-  return <span className={`icon-glyph ${className}`} aria-hidden="true">{children}</span>
+function AppIcon({ name, className = '', size = 24 }) {
+  const common = {
+    className: `app-icon ${className}`,
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.9,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    'aria-hidden': true,
+    focusable: 'false',
+  }
+
+  let content
+  switch (name) {
+    case 'home':
+      content = <><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z" /></>
+      break
+    case 'library':
+      content = <><rect x="4" y="4" width="6" height="7" rx="1.2" /><rect x="14" y="4" width="6" height="7" rx="1.2" /><rect x="4" y="14" width="6" height="6" rx="1.2" /><path d="M14 17h6M17 14v6" /></>
+      break
+    case 'trophy':
+      content = <><path d="M8 4h8v5a4 4 0 0 1-8 0Z" /><path d="M8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M8.5 21h7M9 17h6" /></>
+      break
+    case 'chart':
+      content = <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /><path d="M4 10h0M10 4h0M16 13h0" /></>
+      break
+    case 'settings':
+      content = <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06-2.5 2.5-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21h-3.54v-.09a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06-2.5-2.5.06-.06A1.7 1.7 0 0 0 5.72 15a1.7 1.7 0 0 0-1.56-1.04H4.1v-3.54h.06A1.7 1.7 0 0 0 5.72 9.4a1.7 1.7 0 0 0-.34-1.87l-.06-.06 2.5-2.5.06.06a1.7 1.7 0 0 0 1.87.34 1.7 1.7 0 0 0 1.04-1.56V3.7h3.54v.11a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06 2.5 2.5-.06.06a1.7 1.7 0 0 0-.34 1.87 1.7 1.7 0 0 0 1.56 1.04h.11v3.54h-.11A1.7 1.7 0 0 0 19.4 15Z" /></>
+      break
+    case 'back':
+      content = <><path d="M15 18 9 12l6-6" /><path d="M9 12h11" /></>
+      break
+    case 'arrow':
+      content = <><path d="M19 12H5" /><path d="m11 18-6-6 6-6" /></>
+      break
+    case 'forward':
+      content = <><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></>
+      break
+    case 'search':
+      content = <><circle cx="10.8" cy="10.8" r="5.8" /><path d="m16 16 4 4" /></>
+      break
+    case 'close':
+      content = <><path d="m6 6 12 12M18 6 6 18" /></>
+      break
+    case 'play':
+      content = <path d="m9 5 10 7-10 7Z" fill="currentColor" stroke="none" />
+      break
+    case 'clock':
+      content = <><circle cx="12" cy="12" r="8" /><path d="M12 7v5l3.5 2" /></>
+      break
+    case 'bolt':
+      content = <path d="m13 2-8 12h6l-1 8 9-13h-6Z" fill="currentColor" stroke="none" />
+      break
+    case 'calendar':
+      content = <><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 10h16" /></>
+      break
+    case 'check':
+      content = <path d="m5 12 4.2 4.2L19 6.8" />
+      break
+    case 'check-circle':
+      content = <><circle cx="12" cy="12" r="8.5" /><path d="m8.3 12 2.4 2.5 5-5" /></>
+      break
+    case 'wrong':
+      content = <><circle cx="12" cy="12" r="8.5" /><path d="m9 9 6 6m0-6-6 6" /></>
+      break
+    case 'info':
+      content = <><circle cx="12" cy="12" r="8.5" /><path d="M12 10v5M12 7h.01" /></>
+      break
+    case 'share':
+      content = <><circle cx="18" cy="5" r="2" /><circle cx="6" cy="12" r="2" /><circle cx="18" cy="19" r="2" /><path d="m8 11 8-5M8 13l8 5" /></>
+      break
+    case 'download':
+      content = <><path d="M12 3v11M8 10l4 4 4-4M5 20h14" /></>
+      break
+    case 'sun':
+      content = <><circle cx="12" cy="12" r="3.5" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>
+      break
+    case 'moon':
+      content = <path d="M20 15.2A8.5 8.5 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z" />
+      break
+    case 'motion':
+      content = <><path d="M5 8h9M5 12h14M5 16h9" /><path d="m15 5 3 3-3 3M17 13l3 3-3 3" /></>
+      break
+    case 'type':
+      content = <><path d="M5 5h14M12 5v14M8 19h8" /></>
+      break
+    case 'history':
+      content = <><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.5" /><path d="M4 4v4.5h4.5M12 7v5l3 2" /></>
+      break
+    case 'trash':
+      content = <><path d="M4 7h16M10 11v5M14 11v5M9 7l1-3h4l1 3M6 7l1 13h10l1-13" /></>
+      break
+    case 'palette':
+      content = <><path d="M12 3a8.5 8.5 0 1 0 0 17c1.5 0 2.3-.8 2.3-1.8 0-1.2-.8-1.8-.8-2.5 0-.7.5-1.1 1.4-1.1H16A4.8 4.8 0 0 0 20.5 10 7 7 0 0 0 12 3Z" /><path d="M7.8 11h.01M10 7.5h.01M14.3 7.5h.01M17 11h.01" /></>
+      break
+    case 'devices':
+      content = <><rect x="5" y="4" width="14" height="12" rx="1.8" /><path d="M9 20h6M12 16v4" /></>
+      break
+    case 'film':
+      content = <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M7 5v14M17 5v14M3 10h4M3 14h4M17 10h4M17 14h4" /></>
+      break
+    case 'landmark':
+      content = <><path d="m3 9 9-5 9 5M5 10v7M9 10v7M15 10v7M19 10v7M3 20h18M3 17h18" /></>
+      break
+    case 'flask':
+      content = <><path d="M9 3h6M10 3v6l-5 8a2.5 2.5 0 0 0 2.2 4h9.6A2.5 2.5 0 0 0 19 17l-5-8V3" /><path d="M7.8 15h8.4" /></>
+      break
+    case 'globe':
+      content = <><circle cx="12" cy="12" r="8.5" /><path d="M3.8 12h16.4M12 3.5c2.1 2.3 3.2 5.1 3.2 8.5S14.1 18.2 12 20.5c-2.1-2.3-3.2-5.1-3.2-8.5S9.9 5.8 12 3.5" /></>
+      break
+    case 'religion':
+      content = <><path d="M17.5 18.2A7.8 7.8 0 0 1 9.8 5.1 8.5 8.5 0 1 0 17.5 18.2Z" /><path d="m17.5 5.5.7 1.6 1.7.7-1.7.7-.7 1.7-.7-1.7-1.7-.7 1.7-.7Z" /></>
+      break
+    case 'leaf':
+      content = <><path d="M19.5 4.5C11 4.2 5.4 8.1 5.4 14.2c0 3.3 2.3 5.3 5.2 5.3 6.3 0 8.8-7.1 8.9-15Z" /><path d="M5 20c2.5-4.2 6-7 11-9" /></>
+      break
+    case 'calculator':
+      content = <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" /></>
+      break
+    case 'language':
+      content = <><path d="M4 5h10M9 5c0 7-2.5 11-5 13M6 12c1.5 1.8 3.4 3.1 5.7 3.8M14 19l3-8 3 8M15.2 16h3.6" /></>
+      break
+    case 'spark':
+      content = <path d="m12 3 1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6Z" fill="currentColor" stroke="none" />
+      break
+    case 'refresh':
+      content = <><path d="M20 11a8 8 0 0 0-14-4L4 9" /><path d="M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2" /><path d="M20 20v-5h-5" /></>
+      break
+    case 'pause':
+      content = <><path d="M8 6v12M16 6v12" /></>
+      break
+    case 'infinity':
+      content = <path d="M7.1 8.1c2.5 0 4.9 7.8 7.4 7.8 3.8 0 3.8-7.8 0-7.8-2.5 0-4.9 7.8-7.4 7.8-3.8 0-3.8-7.8 0-7.8Z" />
+      break
+    case 'medal':
+      content = <><circle cx="12" cy="15" r="5" /><path d="m8 3 2.5 7M16 3l-2.5 7M9 3h6" /><path d="m12 12 1 2 2.1.3-1.5 1.5.4 2.1-2-1-2 1 .4-2.1-1.5-1.5 2.1-.3Z" /></>
+      break
+    default:
+      content = <circle cx="12" cy="12" r="7" />
+  }
+
+  return <svg {...common}>{content}</svg>
 }
 
-function Brand({ compact = false }) {
+function CategoryIcon({ category, className = '', size = 24 }) {
+  const names = {
+    science: 'flask',
+    geography: 'globe',
+    religion: 'religion',
+    history: 'landmark',
+    arts: 'palette',
+    culture: 'film',
+    technology: 'devices',
+    sports: 'trophy',
+    language: 'language',
+    nature: 'leaf',
+    math: 'calculator',
+  }
+  return <AppIcon name={names[category.id] || 'library'} className={className} size={size} />
+}
+
+function Brand({ compact = false, onClick }) {
   return (
-    <button className={`brand ${compact ? 'brand--compact' : ''}`} type="button" aria-label="العودة إلى الرئيسية">
-      <span className="brand__mark" aria-hidden="true">
-        <span className="brand__book">⌁</span>
-        <span className="brand__spark">✦</span>
-      </span>
-      <span className="brand__word">معارف</span>
+    <button className={`brand ${compact ? 'brand--compact' : ''}`} type="button" onClick={onClick} aria-label="العودة إلى الرئيسية">
+      <img className="brand__mark" src={`${import.meta.env.BASE_URL}maaref-mark.svg`} alt="" />
+      {!compact && <span className="brand__word">معارف</span>}
     </button>
+  )
+}
+
+function IconButton({ label, icon, onClick, className = '' }) {
+  return <button type="button" className={`icon-button ${className}`} onClick={onClick} aria-label={label} title={label}><AppIcon name={icon} /></button>
+}
+
+function AppBar({ view, level, points, navigate, onSearch }) {
+  const pageMeta = {
+    categories: { overline: 'مكتبة معارف', title: 'المعلومات' },
+    competitions: { overline: 'ساحة اللعب', title: 'المسابقات' },
+    profile: { overline: 'ملف اللاعب', title: 'تقدمي' },
+    settings: { overline: 'تخصيص التطبيق', title: 'الإعدادات' },
+    results: { overline: 'ملخص الجولة', title: 'النتيجة' },
+  }
+  const meta = pageMeta[view]
+  const canGoBack = view === 'settings' || view === 'results'
+
+  return (
+    <header className="app-bar topbar">
+      <div className="app-bar__inner app-page">
+        {view === 'home' ? (
+          <Brand onClick={() => navigate('home')} />
+        ) : (
+          <div className="app-bar__title">
+            {canGoBack && <IconButton label="رجوع" icon="back" onClick={() => navigate('home')} className="app-bar__back" />}
+            <div><small>{meta?.overline}</small><h1>{meta?.title}</h1></div>
+          </div>
+        )}
+
+        <div className="app-bar__actions">
+          {view === 'home' && <button className="points-pill" type="button" onClick={() => navigate('profile')} aria-label={`عرض تقدمك، ${formatNumber(points)} نقطة، المستوى ${formatNumber(level)}`}><AppIcon name="spark" size={17} /><span>{formatNumber(points)}</span><b>المستوى {formatNumber(level)}</b></button>}
+          {view === 'home' && <IconButton label="الإعدادات" icon="settings" onClick={() => navigate('settings')} />}
+          {view === 'competitions' && <IconButton label="عرض تقدمي" icon="chart" onClick={() => navigate('profile')} />}
+          {view === 'profile' && <IconButton label="الإعدادات" icon="settings" onClick={() => navigate('settings')} />}
+          {view === 'categories' && <IconButton label="بحث في المعلومات" icon="search" onClick={onSearch} />}
+        </div>
+      </div>
+    </header>
+  )
+}
+
+function BottomNavigation({ items, view, navigate }) {
+  return (
+    <nav className="bottom-navigation mobile-nav" aria-label="التنقل الرئيسي">
+      <div className="bottom-navigation__inner">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={`bottom-navigation__item mobile-nav__item ${view === item.id ? 'is-active' : ''}`}
+            aria-current={view === item.id ? 'page' : undefined}
+            onClick={() => navigate(item.id)}
+          >
+            <span className="bottom-navigation__icon"><AppIcon name={item.icon} size={23} /></span>
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </div>
+    </nav>
+  )
+}
+
+function ConfirmDialog({ dialog, onCancel, onConfirm }) {
+  if (!dialog) return null
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={onCancel}>
+      <section className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" aria-describedby="dialog-description" onMouseDown={(event) => event.stopPropagation()}>
+        <span className={`confirm-dialog__icon ${dialog.tone === 'danger' ? 'is-danger' : ''}`}><AppIcon name={dialog.tone === 'danger' ? 'trash' : 'info'} /></span>
+        <h2 id="dialog-title">{dialog.title}</h2>
+        <p id="dialog-description">{dialog.description}</p>
+        <div className="confirm-dialog__actions">
+          <button className={`app-button ${dialog.tone === 'danger' ? 'app-button--danger' : 'app-button--primary'}`} type="button" onClick={onConfirm}>{dialog.confirmLabel}</button>
+          <button className="app-button app-button--text" type="button" onClick={onCancel}>إلغاء</button>
+        </div>
+      </section>
+    </div>
   )
 }
 
@@ -466,9 +700,11 @@ function App() {
   const [session, setSession] = useState(null)
   const [result, setResult] = useState(null)
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [categorySearch, setCategorySearch] = useState('')
   const [toast, setToast] = useState('')
   const [settings, setSettings] = useState(readSettings)
   const [isTimerPaused, setIsTimerPaused] = useState(false)
+  const [dialog, setDialog] = useState(null)
 
   const categoryCounts = useMemo(() => {
     const counts = Object.fromEntries(categories.map((category) => [category.id, 0]))
@@ -486,6 +722,7 @@ function App() {
   const level = Math.floor(stats.totalPoints / 900) + 1
   const progress = ((stats.totalPoints % 900) / 900) * 100
   const accuracy = stats.answered ? Math.round((stats.correct / stats.answered) * 100) : 0
+  const isMainDestination = ['home', 'categories', 'competitions', 'profile', 'settings'].includes(view)
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stats))
@@ -494,7 +731,7 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
     document.documentElement.style.colorScheme = settings.theme === 'dark' ? 'dark' : 'light'
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', settings.theme === 'dark' ? '#17123A' : '#faf9ff')
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', settings.theme === 'dark' ? '#141218' : '#6750A4')
   }, [settings])
 
   useEffect(() => {
@@ -503,7 +740,16 @@ function App() {
     return () => window.clearTimeout(timeout)
   }, [toast])
 
-  // يتوقف عداد الجولة والانتقال التلقائي عند فتح نافذة تثبيت التطبيق أو مغادرة الصفحة مؤقتًا.
+  useEffect(() => {
+    if (!dialog) return undefined
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setDialog(null)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [dialog])
+
+  // يتوقف عداد الجولة والانتقال التلقائي عند مغادرة التطبيق أو فتح واجهة نظامية مؤقتًا.
   useEffect(() => {
     if (!session) {
       setIsTimerPaused(false)
@@ -544,7 +790,11 @@ function App() {
 
   const navigate = (nextView) => {
     setView(nextView)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: settings.reduceMotion ? 'auto' : 'smooth' })
+  }
+
+  const focusCategorySearch = () => {
+    window.requestAnimationFrame(() => document.getElementById('category-search')?.focus())
   }
 
   const startGame = ({ mode = 'practice', category = 'all', count = 10, duration = 0, daily = false } = {}) => {
@@ -679,7 +929,7 @@ function App() {
     } : previous)
   }
 
-  // بعد الإجابة يبدأ العداد بالمدة التي اختارها اللاعب؛ يبقى زر «التالي» متاحًا للانتقال الفوري.
+  // يبقى زر «السؤال التالي» متاحًا حتى مع تشغيل الانتقال التلقائي.
   useEffect(() => {
     if (isTimerPaused || !session?.selectedAnswer || !session.autoAdvanceUntil) return undefined
 
@@ -701,154 +951,103 @@ function App() {
     return () => window.clearInterval(countdown)
   }, [session?.selectedAnswer, session?.currentIndex, session?.autoAdvanceUntil, isTimerPaused])
 
-  const abandonSession = () => {
-    if (window.confirm('هل تريد إنهاء هذه الجلسة دون حفظ نتيجتها؟')) {
+  const requestConfirmation = (options) => setDialog(options)
+
+  const abandonSession = () => requestConfirmation({
+    title: 'إنهاء المسابقة؟',
+    description: 'ستعود إلى الرئيسية ولن تُسجّل نتيجة هذه الجولة. ستظل أسئلتها محجوزة حتى لا تتكرر.',
+    confirmLabel: 'إنهاء الجولة',
+    tone: 'danger',
+    onConfirm: () => {
       setIsTimerPaused(false)
       setSession(null)
       navigate('home')
-    }
-  }
+    },
+  })
 
-  const resetProgress = () => {
-    if (window.confirm('سيتم مسح نقاطك ونتائجك المحفوظة على هذا الجهاز. هل تريد المتابعة؟')) {
+  const resetProgress = () => requestConfirmation({
+    title: 'مسح التقدم المحفوظ؟',
+    description: 'سيُحذف رصيد النقاط والنتائج المخزنة على هذا الجهاز فقط، ولا يمكن التراجع عن ذلك.',
+    confirmLabel: 'مسح التقدم',
+    tone: 'danger',
+    onConfirm: () => {
       setStats(emptyStats)
       setToast('تم مسح التقدم المحفوظ.')
-    }
-  }
+    },
+  })
 
-  const resetQuestionHistory = () => {
-    if (window.confirm('سيتم إعادة إتاحة جميع الأسئلة في الجولات القادمة، مع الاحتفاظ بنقاطك ونتائجك. هل تريد المتابعة؟')) {
+  const resetQuestionHistory = () => requestConfirmation({
+    title: 'إعادة إتاحة الأسئلة؟',
+    description: 'ستصبح جميع الأسئلة متاحة للجولات القادمة، مع الاحتفاظ بنقاطك ونتائجك الحالية.',
+    confirmLabel: 'إعادة الإتاحة',
+    tone: 'default',
+    onConfirm: () => {
       setStats((previous) => ({ ...previous, seenQuestionIds: [] }))
       setToast('تمت إعادة إتاحة جميع الأسئلة للجولات القادمة.')
+    },
+  })
+
+  const shareResult = async (sharedResult) => {
+    const total = sharedResult.questions.length
+    const percent = Math.round((sharedResult.correctCount / total) * 100)
+    const categoryTitle = sharedResult.category === 'all' ? 'معارف' : categoryMap[sharedResult.category]?.title || 'معارف'
+    const text = `أنهيت جولة ${categoryTitle} في معارف: ${formatNumber(sharedResult.correctCount)} من ${formatNumber(total)} إجابة صحيحة بنسبة ${formatNumber(percent)}٪ و${formatNumber(sharedResult.score)} نقطة.`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'نتيجتي في معارف', text })
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text)
+        setToast('تم نسخ نتيجتك لتشاركها.')
+      } else {
+        setToast('نتيجتك جاهزة للمشاركة: ' + text)
+      }
+    } catch (error) {
+      if (error?.name !== 'AbortError') setToast('تعذرت المشاركة الآن، حاول مرة أخرى.')
     }
   }
 
   const updateSettings = (changes) => setSettings((previous) => ({ ...previous, ...changes }))
 
   const navItems = [
-    { id: 'home', label: 'الرئيسية', icon: '⌂' },
-    { id: 'categories', label: 'الفئات', icon: '◫' },
-    { id: 'competitions', label: 'المسابقات', icon: '⚡' },
-    { id: 'profile', label: 'تقدمي', icon: '◌' },
-    { id: 'settings', label: 'الإعدادات', icon: '⚙' },
+    { id: 'home', label: 'الرئيسية', icon: 'home' },
+    { id: 'categories', label: 'المعلومات', icon: 'library' },
+    { id: 'competitions', label: 'المسابقات', icon: 'trophy' },
+    { id: 'profile', label: 'تقدمي', icon: 'chart' },
+    { id: 'settings', label: 'المزيد', icon: 'settings' },
   ]
+
+  const confirmDialog = () => {
+    const action = dialog?.onConfirm
+    setDialog(null)
+    action?.()
+  }
 
   return (
     <div className={`app-shell theme--${settings.theme} ${settings.questionTextSize === 'large' ? 'text-scale--large' : ''} ${settings.reduceMotion ? 'reduce-motion' : ''}`}>
-      <div className="ambient ambient--one" />
-      <div className="ambient ambient--two" />
+      {view !== 'quiz' && <AppBar view={view} level={level} points={stats.totalPoints} navigate={navigate} onSearch={focusCategorySearch} />}
 
-      {view !== 'quiz' && (
-        <header className="topbar">
-          <div className="topbar__inner">
-            <div onClick={() => navigate('home')} className="brand-wrap" role="presentation">
-              <Brand />
-            </div>
-            <nav className="desktop-nav" aria-label="التنقل الرئيسي">
-              {navItems.map((item) => (
-                <button
-                  key={item.id}
-                  className={`nav-link ${view === item.id ? 'is-active' : ''}`}
-                  onClick={() => navigate(item.id)}
-                  type="button"
-                >
-                  <Icon>{item.icon}</Icon>
-                  {item.label}
-                </button>
-              ))}
-            </nav>
-            <div className="topbar__actions">
-              <button className="flame-chip" type="button" onClick={() => navigate('profile')} title="نقاطك ومستواك">
-                <span>✦</span>
-                <strong>{formatNumber(stats.totalPoints)}</strong>
-                <span className="hide-small">نقطة</span>
-              </button>
-              <button className="avatar" type="button" onClick={() => navigate('profile')} aria-label="عرض تقدمي">
-                <span>{String(level).padStart(2, '0')}</span>
-              </button>
-            </div>
-          </div>
-        </header>
-      )}
-
-      <main className={`main-content main-content--${view}`}>
-        {view === 'home' && (
-          <HomeView
-            categories={categories}
-            counts={categoryCounts}
-            stats={stats}
-            level={level}
-            accuracy={accuracy}
-            startGame={startGame}
-            navigate={navigate}
-          />
-        )}
-        {view === 'categories' && (
-          <CategoriesView
-            counts={categoryCounts}
-            activeFilter={categoryFilter}
-            setActiveFilter={setCategoryFilter}
-            startGame={startGame}
-          />
-        )}
-        {view === 'competitions' && (
-          <CompetitionsView
-            stats={stats}
-            startGame={startGame}
-            navigate={navigate}
-          />
-        )}
-        {view === 'profile' && (
-          <ProfileView
-            stats={stats}
-            level={level}
-            progress={progress}
-            accuracy={accuracy}
-            counts={categoryCounts}
-            resetProgress={resetProgress}
-            startGame={startGame}
-          />
-        )}
-        {view === 'settings' && (
-          <SettingsView
-            settings={settings}
-            updateSettings={updateSettings}
-            seenQuestionCount={stats.seenQuestionIds.length}
-            unseenQuestionCount={unseenQuestionCount}
-            resetQuestionHistory={resetQuestionHistory}
-            resetProgress={resetProgress}
-          />
-        )}
-        {view === 'quiz' && session && (
-          <QuizView
-            session={session}
-            timerPaused={isTimerPaused}
-            answerQuestion={answerQuestion}
-            nextQuestion={nextQuestion}
-            abandonSession={abandonSession}
-          />
-        )}
-        {view === 'results' && result && (
-          <ResultView result={result} startGame={startGame} navigate={navigate} />
-        )}
+      <main className={`app-content main-content app-content--${view}`}>
+        {view === 'home' && <HomeView categories={categories} counts={categoryCounts} stats={stats} level={level} accuracy={accuracy} startGame={startGame} navigate={navigate} />}
+        {view === 'categories' && <CategoriesView counts={categoryCounts} activeFilter={categoryFilter} setActiveFilter={setCategoryFilter} searchTerm={categorySearch} setSearchTerm={setCategorySearch} startGame={startGame} />}
+        {view === 'competitions' && <CompetitionsView stats={stats} startGame={startGame} navigate={navigate} />}
+        {view === 'profile' && <ProfileView stats={stats} level={level} progress={progress} accuracy={accuracy} counts={categoryCounts} startGame={startGame} />}
+        {view === 'settings' && <SettingsView settings={settings} updateSettings={updateSettings} seenQuestionCount={stats.seenQuestionIds.length} unseenQuestionCount={unseenQuestionCount} resetQuestionHistory={resetQuestionHistory} resetProgress={resetProgress} />}
+        {view === 'quiz' && session && <QuizView session={session} timerPaused={isTimerPaused} answerQuestion={answerQuestion} nextQuestion={nextQuestion} abandonSession={abandonSession} />}
+        {view === 'results' && result && <ResultView result={result} startGame={startGame} navigate={navigate} onShare={() => shareResult(result)} />}
       </main>
 
-      {view !== 'quiz' && (
-        <nav className="mobile-nav" aria-label="التنقل عبر الجوال">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              className={`mobile-nav__item ${view === item.id ? 'is-active' : ''}`}
-              onClick={() => navigate(item.id)}
-              type="button"
-            >
-              <span>{item.icon}</span>
-              <small>{item.label}</small>
-            </button>
-          ))}
-        </nav>
-      )}
-      {toast && <div className="toast" role="status">{toast}</div>}
+      {isMainDestination && <BottomNavigation items={navItems} view={view} navigate={navigate} />}
+      {toast && <div className="app-toast" role="status"><AppIcon name="check-circle" size={19} />{toast}</div>}
+      <ConfirmDialog dialog={dialog} onCancel={() => setDialog(null)} onConfirm={confirmDialog} />
+    </div>
+  )
+}
+
+function AppSectionHeading({ eyebrow, title, action, onAction }) {
+  return (
+    <div className="section-heading">
+      <div>{eyebrow && <small>{eyebrow}</small>}<h2>{title}</h2></div>
+      {action && <button type="button" className="section-heading__action" onClick={onAction}>{action}<AppIcon name="arrow" size={18} /></button>}
     </div>
   )
 }
@@ -858,317 +1057,177 @@ function HomeView({ categories: allCategories, counts, stats, level, accuracy, s
   const dailyDone = stats.dailyDate === todayKey() && stats.dailyBest > 0
 
   return (
-    <>
-      <section className="hero page-width">
-        <div className="hero__copy reveal">
-          <span className="eyebrow"><span>✦</span> تعلّم، العب، وتقدّم كل يوم</span>
-          <h1>كل سؤال يفتح<br /><em>نافذة معرفة.</em></h1>
-          <p>منصة عربية تفاعلية تجمع آلاف الأسئلة في تجربة سريعة، جميلة، ومصممة لتناسبك أينما كنت.</p>
-          <div className="hero__actions">
-            <button className="button button--primary" type="button" onClick={() => startGame({ mode: 'test', count: 15, duration: 360 })}>
-              ابدأ اختبارك <span>←</span>
-            </button>
-            <button className="button button--soft" type="button" onClick={() => startGame({ mode: 'daily', count: 10, duration: 180, daily: true })}>
-              <span>⚡</span> تحدي اليوم
-            </button>
-          </div>
-          <div className="hero__trust">
-            <span className="avatars"><i>✦</i><i>🌍</i><i>🧠</i></span>
-            <span><b>+10,000</b> سؤال عربي في انتظارك</span>
-          </div>
-        </div>
+    <div className="app-page home-screen">
+      <section className="home-welcome">
+        <div><small>مرحبًا بك في معارف</small><h1>جاهز لتحدٍ جديد؟</h1><p>خطوة معرفية صغيرة اليوم تصنع فرقًا كبيرًا.</p></div>
+        <button className="level-chip" type="button" onClick={() => navigate('profile')} aria-label={`المستوى ${formatNumber(level)}، عرض التقدم`}><span>{formatNumber(level)}</span><small>مستوى</small></button>
+      </section>
 
-        <div className="hero__visual reveal reveal--late" aria-label="بطاقة عرض لتحدي يومي">
-          <div className="orb orb--violet" />
-          <div className="orb orb--mint" />
-          <span className="floating floating--one">🌍</span>
-          <span className="floating floating--two">✨</span>
-          <span className="floating floating--three">🧠</span>
-          <article className="hero-card">
-            <div className="hero-card__head">
-              <span className="hero-card__icon">⚡</span>
-              <div><small>جرعة اليوم</small><strong>تحدّي المعرفة</strong></div>
-              <span className="hero-card__more">•••</span>
-            </div>
-            <div className="hero-card__progress"><i /><i /><i className="is-empty" /><i className="is-empty" /></div>
-            <p>أي كوكب يُعرف باسم <b>الكوكب الأحمر؟</b></p>
-            <div className="hero-card__answer"><span>أ</span> المريخ <b>✓</b></div>
-            <footer><span>+ 120 نقطة</span><span>01:28 ⏱</span></footer>
-          </article>
-          <div className="hero-score"><span>🏅</span><div><small>مستواك الحالي</small><b>المستوى {formatNumber(level)}</b></div></div>
+      <section className="daily-challenge-card">
+        <div className="daily-challenge-card__art"><span className="daily-challenge-card__orbit" /><AppIcon name="bolt" size={30} /></div>
+        <div className="daily-challenge-card__content">
+          <div className="daily-challenge-card__label"><span>{dailyDone ? 'أنجزت تحدي اليوم' : 'تحدي اليوم'}</span>{dailyDone && <AppIcon name="check-circle" size={17} />}</div>
+          <h2>{dailyDone ? `أفضل نتيجة: ${formatNumber(stats.dailyBest)} نقطة` : 'عشر أسئلة جديدة في ثلاث دقائق'}</h2>
+          <p><span><AppIcon name="library" size={16} />١٠ أسئلة</span><span><AppIcon name="clock" size={16} />٣ دقائق</span></p>
+          <button className="app-button app-button--on-primary" type="button" onClick={() => startGame({ mode: 'daily', count: 10, duration: 180, daily: true })}>{dailyDone ? 'جولة جديدة' : 'ابدأ التحدي'}<AppIcon name="arrow" size={19} /></button>
         </div>
       </section>
 
-      <section className="quick-strip page-width reveal">
-        <div className="quick-strip__welcome">
-          <span className="quick-strip__emoji">👋</span>
-          <div><small>أهلًا بك في معارف</small><strong>هل أنت مستعد لجولة جديدة؟</strong></div>
-        </div>
-        <div className="quick-stat"><b>{formatNumber(stats.answered)}</b><span>إجابة</span></div>
-        <div className="quick-stat"><b>{formatNumber(accuracy)}%</b><span>دقة إجاباتك</span></div>
-        <div className="quick-stat"><b>{formatNumber(stats.sessions)}</b><span>اختبار مكتمل</span></div>
-        <button type="button" className="text-button" onClick={() => navigate('profile')}>عرض تقدمي ←</button>
-      </section>
-
-      <section className="section page-width">
-        <SectionHeading overline="استكشف عالمك" title="اختر فئة تناسب فضولك" action="كل الفئات" onAction={() => navigate('categories')} />
-        <div className="category-grid category-grid--featured">
-          {featured.map((category) => (
-            <CategoryCard key={category.id} category={category} count={counts[category.id]} onStart={() => startGame({ mode: 'practice', category: category.id, count: 10 })} />
-          ))}
+      <section className="app-section">
+        <AppSectionHeading eyebrow="استكشف" title="اختر ما يثير فضولك" action="كل الفئات" onAction={() => navigate('categories')} />
+        <div className="category-rail">
+          {featured.map((category) => <CategoryCard key={category.id} category={category} count={counts[category.id]} onPractice={() => startGame({ mode: 'practice', category: category.id, count: 10 })} />)}
         </div>
       </section>
 
-      <section className="modes page-width section reveal">
-        <div className="modes__content">
-          <span className="eyebrow eyebrow--dark">مسارات لعب مرنة</span>
-          <h2>تعلم بطريقتك،<br />وتابع تقدّمك بسهولة.</h2>
-          <p>اختر تمرينًا هادئًا، اختبارًا شاملًا، أو سباقًا سريعًا ضد الوقت. تحفظ نتائجك تلقائيًا على جهازك.</p>
-          <button className="button button--ink" type="button" onClick={() => navigate('competitions')}>استكشف المسابقات <span>←</span></button>
-        </div>
-        <div className="mode-stack">
-          <button className="mode-card mode-card--one" type="button" onClick={() => startGame({ mode: 'practice', category: 'science', count: 10 })}>
-            <span className="mode-card__emoji">🪄</span><div><small>تدريب حر</small><strong>استكشف بلا توقيت</strong></div><b>←</b>
-          </button>
-          <button className="mode-card mode-card--two" type="button" onClick={() => startGame({ mode: 'test', count: 15, duration: 360 })}>
-            <span className="mode-card__emoji">🧠</span><div><small>اختبار المعلومات</small><strong>15 سؤالًا متنوعًا</strong></div><b>←</b>
-          </button>
-          <button className="mode-card mode-card--three" type="button" onClick={() => startGame({ mode: 'daily', count: 10, duration: 180, daily: true })}>
-            <span className="mode-card__emoji">⚡</span><div><small>{dailyDone ? 'أنجزت تحدي اليوم' : 'تحدي اليوم'}</small><strong>{dailyDone ? `أفضل نتيجة: ${formatNumber(stats.dailyBest)}` : '10 أسئلة في 3 دقائق'}</strong></div><b>←</b>
-          </button>
+      <section className="app-section">
+        <AppSectionHeading eyebrow="العب بطريقتك" title="مسابقات سريعة" action="عرض الكل" onAction={() => navigate('competitions')} />
+        <div className="quick-challenge-list">
+          <QuickChallenge icon="play" tone="violet" label="تدريب حر" title="استكشف العلوم بلا توقيت" meta="١٠ أسئلة" onClick={() => startGame({ mode: 'practice', category: 'science', count: 10 })} />
+          <QuickChallenge icon="trophy" tone="mint" label="اختبار المعرفة" title="اختبار شامل من ١٥ سؤالًا" meta="٦ دقائق" onClick={() => startGame({ mode: 'test', count: 15, duration: 360 })} />
+          <QuickChallenge icon="bolt" tone="amber" label="تحدي البرق" title="اختبر سرعتك قبل انتهاء الوقت" meta="٩٠ ثانية" onClick={() => startGame({ mode: 'sprint', count: 10, duration: 90 })} />
         </div>
       </section>
 
-      <section className="cta-banner page-width reveal">
-        <div><span>🎯</span><h2>المعرفة عادة صغيرة…<br />وأثرها كبير.</h2></div>
-        <button type="button" className="button button--white" onClick={() => startGame({ mode: 'test', count: 15, duration: 360 })}>اختبر نفسك الآن ←</button>
-      </section>
-    </>
-  )
-}
-
-function SectionHeading({ overline, title, action, onAction }) {
-  return <div className="section-heading"><div><small>{overline}</small><h2>{title}</h2></div>{action && <button className="text-button" type="button" onClick={onAction}>{action} <span>←</span></button>}</div>
-}
-
-function CategoryCard({ category, count, onStart, detailed = false }) {
-  const openCategory = () => onStart('practice')
-  const handleCardKeyDown = (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault()
-      openCategory()
-    }
-  }
-  const cardInteraction = detailed ? {} : {
-    role: 'button',
-    tabIndex: 0,
-    'aria-label': `ابدأ تدريبًا في فئة ${category.title}`,
-    onClick: openCategory,
-    onKeyDown: handleCardKeyDown,
-  }
-
-  return (
-    <article className={`category-card ${detailed ? 'category-card--detailed' : ''}`} style={{ '--accent': category.accent, '--glow': category.glow }} {...cardInteraction}>
-      <div className="category-card__top"><span className="category-card__emoji">{category.emoji}</span><span className="category-card__dots">•••</span></div>
-      <h3>{category.title}</h3>
-      <p>{category.description}</p>
-      <div className="category-card__bottom">
-        <span>{formatNumber(count || 0)} سؤال</span>
-        {detailed ? <button type="button" onClick={() => onStart('practice')} aria-label={`ابدأ فئة ${category.title}`}>ابدأ <b>←</b></button> : <span className="category-card__start" aria-hidden="true">ابدأ <b>←</b></span>}
-      </div>
-      {detailed && <div className="category-card__detail-actions"><button type="button" onClick={() => onStart('practice')}>تدريب حر</button><button type="button" onClick={() => onStart('test')}>اختبار سريع</button></div>}
-    </article>
-  )
-}
-
-function CategoriesView({ counts, activeFilter, setActiveFilter, startGame }) {
-  const visibleCategories = activeFilter === 'all' ? categories : categories.filter((category) => category.id === activeFilter)
-  return (
-    <div className="page-width page-intro">
-      <span className="eyebrow"><span>🗂️</span> مكتبة المعرفة</span>
-      <h1>فئات واسعة،<br /><em>وتحديات لا تنتهي.</em></h1>
-      <p className="page-intro__lead">اختر المجال الذي تحبه، ثم ابدأ تدريبًا بلا وقت أو اختبارًا سريعًا يحسب نقاطك.</p>
-
-      <div className="filter-row" aria-label="فلترة الفئات">
-        <button type="button" className={activeFilter === 'all' ? 'is-active' : ''} onClick={() => setActiveFilter('all')}>الكل <span>{formatNumber(questionBank.length)}</span></button>
-        {categories.map((category) => <button type="button" key={category.id} className={activeFilter === category.id ? 'is-active' : ''} onClick={() => setActiveFilter(category.id)}>{category.emoji} {category.shortTitle}</button>)}
-      </div>
-
-      <div className="category-grid category-grid--all">
-        {visibleCategories.map((category) => (
-          <CategoryCard
-            key={category.id}
-            category={category}
-            count={counts[category.id]}
-            detailed
-            onStart={(mode) => startGame({ mode: mode === 'test' ? 'test' : 'practice', category: category.id, count: mode === 'test' ? 15 : 10, duration: mode === 'test' ? 300 : 0 })}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function CompetitionsView({ stats, startGame, navigate }) {
-  const dailyDone = stats.dailyDate === todayKey() && stats.dailyBest > 0
-  return (
-    <div className="page-width competitions-page">
-      <section className="competition-hero">
-        <div>
-          <span className="eyebrow"><span>⚡</span> ساحة التحديات</span>
-          <h1>وقت أقل،<br /><em>حماس أكثر.</em></h1>
-          <p>اختبر سرعتك، اجمع النقاط، واصنع أفضل نتيجة شخصية. المنافسات الجماعية ستصل في المرحلة القادمة.</p>
-        </div>
-        <div className="competition-hero__timer"><span>⏱</span><b>01:30</b><small>هل تستطيع إنهاء الجولة؟</small></div>
-      </section>
-
-      <div className="challenge-grid">
-        <ChallengeCard emoji="⚡" label="تحدي البرق" title="10 أسئلة في 90 ثانية" description="اختبار سريع من فئات متنوعة." meta="+ نقاط سرعة" color="violet" onStart={() => startGame({ mode: 'sprint', count: 10, duration: 90 })} />
-        <ChallengeCard emoji="🎯" label="اختبار المعرفة" title="15 سؤالًا متنوعًا" description="اختبر رصيدك المعرفي في جلسة شاملة." meta="6 دقائق" color="mint" onStart={() => startGame({ mode: 'test', count: 15, duration: 360 })} />
-        <ChallengeCard emoji="☀️" label={dailyDone ? 'أنجزت التحدي' : 'تحدي اليوم'} title={dailyDone ? `أفضل نتيجتك: ${formatNumber(stats.dailyBest)}` : '10 أسئلة جديدة كل يوم'} description="أسئلة جديدة تضيفها إلى رصيدك المعرفي كل يوم." meta="3 دقائق" color="sun" onStart={() => startGame({ mode: 'daily', count: 10, duration: 180, daily: true })} />
-      </div>
-
-      <section className="scoreboard section">
-        <div className="scoreboard__head"><div><small>لوحة النتائج المحلية</small><h2>أفضل إنجازاتك على هذا الجهاز</h2></div><span>🏅</span></div>
-        <div className="scoreboard__body">
-          <div className="scoreboard__rank"><i>01</i><span className="scoreboard__avatar">أنت</span><div><b>أفضل نتيجة شخصية</b><small>واصل لتتجاوز رقمك</small></div><strong>{formatNumber(stats.bestScore)}</strong></div>
-          <div className="scoreboard__rank"><i>✦</i><span className="scoreboard__avatar scoreboard__avatar--mint">م</span><div><b>إجمالي النقاط</b><small>كل إجابة صحيحة تقرّبك من مستوى جديد</small></div><strong>{formatNumber(stats.totalPoints)}</strong></div>
-          <div className="scoreboard__rank"><i>✓</i><span className="scoreboard__avatar scoreboard__avatar--sun">%</span><div><b>دقة الإجابات</b><small>تعلم من الإجابة بعد كل سؤال</small></div><strong>{stats.answered ? `${formatNumber(Math.round((stats.correct / stats.answered) * 100))}%` : '—'}</strong></div>
-        </div>
-      </section>
-
-      <section className="online-teaser reveal">
-        <div className="online-teaser__badge">قريبًا</div>
-        <div><span>🌐</span><h2>منافسات حقيقية بين الأصدقاء</h2><p>حسابات، غرف لعب خاصة، ولوحة صدارة مشتركة — الواجهة جاهزة للتوسع عند ربط قاعدة البيانات.</p></div>
-        <button type="button" className="button button--soft" onClick={() => navigate('profile')}>تابع تقدّمك ←</button>
-      </section>
-    </div>
-  )
-}
-
-function ChallengeCard({ emoji, label, title, description, meta, color, onStart }) {
-  return <article className={`challenge-card challenge-card--${color}`}><span className="challenge-card__emoji">{emoji}</span><small>{label}</small><h3>{title}</h3><p>{description}</p><div><span>{meta}</span><button type="button" onClick={onStart}>ابدأ ←</button></div></article>
-}
-
-function SettingsToggle({ label, description, enabled, onToggle }) {
-  return (
-    <div className="setting-toggle-row">
-      <div><b>{label}</b><p>{description}</p></div>
-      <button type="button" className={`setting-switch ${enabled ? 'is-on' : ''}`} role="switch" aria-label={label} aria-checked={enabled} onClick={onToggle}>
-        <span>{enabled ? 'مفعّل' : 'متوقف'}</span><i aria-hidden="true" />
+      <button className="home-progress-card" type="button" onClick={() => navigate('profile')}>
+        <div className="home-progress-card__icon"><AppIcon name="chart" size={24} /></div>
+        <div><small>تقدمك حتى الآن</small><strong>{formatNumber(stats.answered)} إجابة · {formatNumber(accuracy)}٪ دقة</strong></div>
+        <AppIcon name="arrow" size={21} />
       </button>
     </div>
   )
 }
 
-function SettingsSegment({ label, description, value, choices, onChange }) {
+function QuickChallenge({ icon, tone, label, title, meta, onClick }) {
   return (
-    <div className="setting-segment-row">
-      <div><b>{label}</b><p>{description}</p></div>
-      <div className="setting-segment" role="group" aria-label={label}>
-        {choices.map((choice) => <button key={choice.value} type="button" className={value === choice.value ? 'is-selected' : ''} aria-pressed={value === choice.value} onClick={() => onChange(choice.value)}>{choice.label}</button>)}
+    <button type="button" className={`quick-challenge quick-challenge--${tone}`} onClick={onClick}>
+      <span className="quick-challenge__icon"><AppIcon name={icon} size={23} /></span>
+      <span className="quick-challenge__content"><small>{label}</small><strong>{title}</strong><em>{meta}</em></span>
+      <AppIcon name="arrow" size={20} />
+    </button>
+  )
+}
+
+function CategoryCard({ category, count, onPractice, onTest, detailed = false }) {
+  return (
+    <article className={`category-card ${detailed ? 'category-card--detailed' : 'category-card--compact'}`} style={{ '--accent': category.accent, '--glow': category.glow }}>
+      <button className="category-card__main" type="button" onClick={onPractice} aria-label={`ابدأ تدريبًا في فئة ${category.title}`}>
+        <span className="category-card__icon"><CategoryIcon category={category} size={detailed ? 27 : 24} /></span>
+        <span className="category-card__text"><strong>{detailed ? category.title : category.shortTitle}</strong><small>{detailed ? category.description : `${formatNumber(count || 0)} سؤال`}</small></span>
+        <AppIcon name="arrow" size={18} className="category-card__arrow" />
+      </button>
+      {detailed && <div className="category-card__actions"><button type="button" onClick={onPractice}>تدريب حر</button><button type="button" onClick={onTest}>اختبار سريع</button></div>}
+    </article>
+  )
+}
+
+function CategoriesView({ counts, activeFilter, setActiveFilter, searchTerm, setSearchTerm, startGame }) {
+  const normalizedSearch = searchTerm.trim().toLocaleLowerCase('ar')
+  const visibleCategories = categories.filter((category) => {
+    const matchesFilter = activeFilter === 'all' || category.id === activeFilter
+    const searchable = `${category.title} ${category.shortTitle} ${category.description}`.toLocaleLowerCase('ar')
+    return matchesFilter && (!normalizedSearch || searchable.includes(normalizedSearch))
+  })
+
+  return (
+    <div className="app-page library-screen">
+      <section className="page-heading"><small>أكثر من {formatNumber(questionBank.length)} سؤال</small><h1>المعلومات</h1><p>اختر تصنيفًا، ابحث فيه، ثم حوّل المعرفة إلى جولة قصيرة ممتعة.</p></section>
+      <label className="app-search"><AppIcon name="search" size={21} /><input id="category-search" type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="ابحث في الفئات" aria-label="ابحث في فئات المعلومات" />{searchTerm && <button type="button" aria-label="مسح البحث" onClick={() => setSearchTerm('')}><AppIcon name="close" size={18} /></button>}</label>
+
+      <div className="filter-chips" aria-label="فلترة الفئات">
+        <button type="button" className={activeFilter === 'all' ? 'is-active' : ''} onClick={() => setActiveFilter('all')}>الكل</button>
+        {categories.map((category) => <button type="button" key={category.id} className={activeFilter === category.id ? 'is-active' : ''} onClick={() => setActiveFilter(category.id)}><CategoryIcon category={category} size={16} />{category.shortTitle}</button>)}
       </div>
+
+      {visibleCategories.length ? <div className="category-library-grid">{visibleCategories.map((category) => <CategoryCard key={category.id} category={category} count={counts[category.id]} detailed onPractice={() => startGame({ mode: 'practice', category: category.id, count: 10 })} onTest={() => startGame({ mode: 'test', category: category.id, count: 15, duration: 300 })} />)}</div> : <EmptyState title="لا توجد فئات مطابقة" description="جرّب عبارة بحث أخرى أو اعرض جميع الفئات مرة أخرى." action="عرض الكل" onAction={() => { setSearchTerm(''); setActiveFilter('all') }} />}
     </div>
   )
+}
+
+function EmptyState({ title, description, action, onAction }) {
+  return <section className="empty-state"><span><AppIcon name="search" size={28} /></span><h2>{title}</h2><p>{description}</p>{action && <button className="app-button app-button--tonal" type="button" onClick={onAction}>{action}</button>}</section>
+}
+
+function CompetitionsView({ stats, startGame, navigate }) {
+  const dailyDone = stats.dailyDate === todayKey() && stats.dailyBest > 0
+  const accuracy = stats.answered ? Math.round((stats.correct / stats.answered) * 100) : 0
+  return (
+    <div className="app-page competitions-screen">
+      <section className="page-heading"><small>ساحة التحديات</small><h1>المسابقات</h1><p>اختر المدة التي تناسبك، واجمع النقاط بأسئلة جديدة في كل جولة.</p></section>
+
+      <section className="competition-feature">
+        <div className="competition-feature__header"><span className="competition-feature__icon"><AppIcon name="calendar" size={25} /></span><div><small>{dailyDone ? 'أنجزت تحدي اليوم' : 'تحدي اليوم'}</small><h2>{dailyDone ? `أفضل نتيجتك ${formatNumber(stats.dailyBest)} نقطة` : 'عودة يومية إلى المعرفة'}</h2></div>{dailyDone && <AppIcon name="check-circle" size={22} />}</div>
+        <div className="competition-feature__details"><span><AppIcon name="library" size={17} />١٠ أسئلة</span><span><AppIcon name="clock" size={17} />٣ دقائق</span><span><AppIcon name="medal" size={17} />نقاط إضافية</span></div>
+        <button type="button" className="app-button app-button--on-primary" onClick={() => startGame({ mode: 'daily', count: 10, duration: 180, daily: true })}>{dailyDone ? 'العب مرة أخرى' : 'ابدأ تحدي اليوم'}<AppIcon name="arrow" size={19} /></button>
+      </section>
+
+      <section className="app-section"><AppSectionHeading title="اختر مسابقتك" />
+        <div className="competition-list">
+          <ChallengeCard icon="bolt" tone="violet" label="تحدي البرق" title="١٠ أسئلة في ٩٠ ثانية" description="جلسة سريعة لاختبار تركيزك وسرعة قرارك." meta="نقاط سرعة" onStart={() => startGame({ mode: 'sprint', count: 10, duration: 90 })} />
+          <ChallengeCard icon="trophy" tone="mint" label="اختبار المعرفة" title="١٥ سؤالًا متنوعًا" description="اختبار شامل من فئات معارف المختلفة." meta="٦ دقائق" onStart={() => startGame({ mode: 'test', count: 15, duration: 360 })} />
+          <ChallengeCard icon="play" tone="blue" label="تدريب حر" title="تعلّم بلا عداد" description="خذ وقتك في التفكير واكتشف أسئلة جديدة." meta="١٠ أسئلة" onStart={() => startGame({ mode: 'practice', count: 10 })} />
+        </div>
+      </section>
+
+      <section className="local-scoreboard"><div className="local-scoreboard__header"><div><small>لوحة النتائج المحلية</small><h2>أفضل إنجازاتك</h2></div><span><AppIcon name="medal" size={25} /></span></div><div className="local-scoreboard__metrics"><ScoreMetric icon="trophy" label="أفضل نتيجة" value={formatNumber(stats.bestScore)} /><ScoreMetric icon="spark" label="إجمالي النقاط" value={formatNumber(stats.totalPoints)} /><ScoreMetric icon="check-circle" label="دقة الإجابات" value={stats.answered ? `${formatNumber(accuracy)}٪` : '—'} /></div></section>
+
+      <section className="online-coming-soon"><span><AppIcon name="library" size={23} /></span><div><small>قريبًا</small><h2>تحديات بين الأصدقاء</h2><p>تظل نتائجك محفوظة محليًا الآن، والواجهة جاهزة للمنافسات الجماعية عند ربط الخدمة المستقبلية.</p></div><button type="button" className="section-heading__action" onClick={() => navigate('profile')}>تقدمي<AppIcon name="arrow" size={17} /></button></section>
+    </div>
+  )
+}
+
+function ChallengeCard({ icon, tone, label, title, description, meta, onStart }) {
+  return <article className={`challenge-card challenge-card--${tone}`}><div className="challenge-card__heading"><span><AppIcon name={icon} size={24} /></span><small>{label}</small></div><h3>{title}</h3><p>{description}</p><footer><span>{meta}</span><button className="app-button app-button--tonal" type="button" onClick={onStart}>ابدأ<AppIcon name="arrow" size={17} /></button></footer></article>
+}
+
+function ScoreMetric({ icon, label, value }) {
+  return <div className="score-metric"><span><AppIcon name={icon} size={19} /></span><div><strong>{value}</strong><small>{label}</small></div></div>
+}
+
+function SettingsToggle({ icon, label, description, enabled, onToggle }) {
+  return <div className="settings-row"><span className="settings-row__icon"><AppIcon name={icon} size={21} /></span><div className="settings-row__content"><b>{label}</b><p>{description}</p></div><button type="button" className={`app-switch ${enabled ? 'is-on' : ''}`} role="switch" aria-label={label} aria-checked={enabled} onClick={onToggle}><i aria-hidden="true" /></button></div>
+}
+
+function SettingsSegment({ icon, label, description, value, choices, onChange }) {
+  return <div className="settings-segment-row"><span className="settings-row__icon"><AppIcon name={icon} size={21} /></span><div className="settings-row__content"><b>{label}</b><p>{description}</p><div className="settings-segment" role="group" aria-label={label}>{choices.map((choice) => <button key={choice.value} type="button" className={value === choice.value ? 'is-selected' : ''} aria-pressed={value === choice.value} onClick={() => onChange(choice.value)}>{choice.icon && <AppIcon name={choice.icon} size={15} />}{choice.label}</button>)}</div></div></div>
 }
 
 function SettingsView({ settings, updateSettings, seenQuestionCount, unseenQuestionCount, resetQuestionHistory, resetProgress }) {
   return (
-    <div className="page-width settings-page">
-      <section className="settings-hero reveal">
-        <span className="eyebrow"><span>⚙️</span> إعدادات التجربة</span>
-        <h1>تجربتك، <em>بطريقتك.</em></h1>
-        <p>اضبط الانتقال بين الأسئلة، المظهر، وحجم القراءة. تُحفظ خياراتك على هذا الجهاز تلقائيًا.</p>
-      </section>
+    <div className="app-page settings-screen">
+      <section className="page-heading"><small>تخصيص معارف</small><h1>الإعدادات</h1><p>تُحفظ كل اختياراتك على هذا الجهاز لتعود إلى التجربة التي تفضلها.</p></section>
+      <div className="settings-groups">
+        <section className="settings-group"><header><small>المظهر وإمكانية القراءة</small><h2>تجربة مريحة لك</h2></header><SettingsSegment icon="palette" label="نمط المظهر" description="اختر الألوان المناسبة لك." value={settings.theme} choices={[{ value: 'light', label: 'فاتح', icon: 'sun' }, { value: 'dark', label: 'داكن', icon: 'moon' }]} onChange={(theme) => updateSettings({ theme })} /><SettingsSegment icon="type" label="حجم نص الأسئلة" description="كبّر نص السؤال لقراءة أسهل." value={settings.questionTextSize} choices={[{ value: 'comfortable', label: 'مريح' }, { value: 'large', label: 'كبير' }]} onChange={(questionTextSize) => updateSettings({ questionTextSize })} /><SettingsToggle icon="motion" label="تقليل المؤثرات الحركية" description="أوقف الحركات غير الضرورية داخل التطبيق." enabled={settings.reduceMotion} onToggle={() => updateSettings({ reduceMotion: !settings.reduceMotion })} /></section>
 
-      <div className="settings-grid">
-        <section className="settings-card reveal">
-          <div className="settings-card__head"><span>🎨</span><div><small>الشكل والقراءة</small><h2>مظهر يناسبك</h2></div></div>
-          <SettingsSegment
-            label="نمط المظهر"
-            description="اختر الواجهة الفاتحة أو الداكنة."
-            value={settings.theme}
-            choices={[{ value: 'light', label: '☀️ فاتح' }, { value: 'dark', label: '🌙 داكن' }]}
-            onChange={(theme) => updateSettings({ theme })}
-          />
-          <SettingsSegment
-            label="حجم نص الأسئلة"
-            description="اجعله أكبر لقراءة أكثر راحة."
-            value={settings.questionTextSize}
-            choices={[{ value: 'comfortable', label: 'مريح' }, { value: 'large', label: 'كبير' }]}
-            onChange={(questionTextSize) => updateSettings({ questionTextSize })}
-          />
-          <SettingsToggle label="تقليل المؤثرات الحركية" description="أوقف الحركات والانتقالات غير الضرورية." enabled={settings.reduceMotion} onToggle={() => updateSettings({ reduceMotion: !settings.reduceMotion })} />
-        </section>
+        <section className="settings-group"><header><small>الجولات والإجابات</small><h2>وتيرة المسابقة</h2></header><SettingsToggle icon="forward" label="الانتقال التلقائي" description="انتقل إلى السؤال التالي بعد الإجابة." enabled={settings.autoAdvance} onToggle={() => updateSettings({ autoAdvance: !settings.autoAdvance })} /><SettingsSegment icon="clock" label="مدة الانتقال" description={settings.autoAdvance ? 'تبدأ بعد اختيار الإجابة.' : 'فعّل الانتقال التلقائي لاستخدام هذه المدة.'} value={String(settings.autoAdvanceSeconds)} choices={AUTO_ADVANCE_OPTIONS.map((seconds) => ({ value: String(seconds), label: `${formatNumber(seconds)} ث` }))} onChange={(seconds) => updateSettings({ autoAdvanceSeconds: Number(seconds) })} /></section>
 
-        <section className="settings-card settings-card--quiz reveal reveal--late">
-          <div className="settings-card__head"><span>⏱️</span><div><small>الجولات والإجابات</small><h2>تحكم في الوتيرة</h2></div></div>
-          <SettingsToggle label="الانتقال التلقائي" description="انتقل بعد الإجابة دون الضغط على زر التالي." enabled={settings.autoAdvance} onToggle={() => updateSettings({ autoAdvance: !settings.autoAdvance })} />
-          <SettingsSegment
-            label="مدة الانتقال"
-            description={settings.autoAdvance ? 'تبدأ بعد اختيار الإجابة في الجولة التالية.' : 'فعّل الانتقال التلقائي أولًا لاستخدام المدة.'}
-            value={String(settings.autoAdvanceSeconds)}
-            choices={AUTO_ADVANCE_OPTIONS.map((seconds) => ({ value: String(seconds), label: `${formatNumber(seconds)} ث` }))}
-            onChange={(seconds) => updateSettings({ autoAdvanceSeconds: Number(seconds) })}
-          />
-        </section>
+        <section className="settings-group"><header><small>سجل التعلّم</small><h2>أسئلة جديدة دائمًا</h2></header><div className="history-overview"><span><AppIcon name="history" size={23} /></span><div><strong>{formatNumber(seenQuestionCount)} سؤال في سجلك</strong><p>يتبقى {formatNumber(unseenQuestionCount)} سؤال جديد في بنك معارف.</p></div></div><p className="settings-note">يُحجز السؤال عند بدء الجولة، لذلك لا يعود إليك في جلسة لاحقة حتى إن خرجت منها مبكرًا.</p><button className="app-button app-button--tonal settings-action" type="button" onClick={resetQuestionHistory}><AppIcon name="refresh" size={18} />إعادة إتاحة الأسئلة</button></section>
 
-        <section className="settings-card settings-card--history reveal">
-          <div className="settings-card__head"><span>🧠</span><div><small>سجل التعلّم</small><h2>لا تكرار في الأسئلة</h2></div></div>
-          <div className="question-history-summary"><b>{formatNumber(seenQuestionCount)}</b><div><strong>سؤال في سجل عدم التكرار</strong><span>يتبقى {formatNumber(unseenQuestionCount)} سؤال جديد في بنك معارف.</span></div></div>
-          <p className="settings-card__note">يُحجز السؤال عند بدء الجولة كي لا يعود لك في جولة لاحقة، حتى إن خرجت من الجولة مبكرًا.</p>
-          <button className="button button--soft settings-card__button" type="button" onClick={resetQuestionHistory}>إعادة إتاحة الأسئلة <span>↻</span></button>
-        </section>
-
-        <section className="settings-card settings-card--safety reveal reveal--late">
-          <div className="settings-card__head"><span>📲</span><div><small>تطبيق معارف</small><h2>التثبيت والبيانات</h2></div></div>
-          <p className="settings-card__note">يُثبّت معارف من قائمة المتصفح ليعمل كتطبيق مستقل؛ لا يظهر زر تثبيت في الصفحة الرئيسية.</p>
-          <div className="settings-install-guide" aria-label="طريقة تثبيت التطبيق"><b>ثبّته من قائمة المتصفح</b><p>Chrome أو Edge: افتح قائمة المتصفح ⋮ ثم اختر «تثبيت معارف» أو «إضافة إلى الشاشة الرئيسية».</p><p>آيفون وآيباد: افتح زر المشاركة ثم اختر «إضافة إلى الشاشة الرئيسية».</p></div>
-          <button className="settings-danger" type="button" onClick={resetProgress}>مسح النقاط والنتائج المحفوظة</button>
-        </section>
+        <section className="settings-group settings-group--app"><header><small>تطبيق معارف</small><h2>التثبيت والبيانات</h2></header><div className="settings-install-guide" aria-label="طريقة تثبيت التطبيق"><span><AppIcon name="download" size={22} /></span><div><b>ثبّت معارف من قائمة المتصفح</b><p>Chrome أو Edge: افتح القائمة ثم اختر «تثبيت معارف» أو «إضافة إلى الشاشة الرئيسية».</p><p>آيفون وآيباد: افتح زر المشاركة ثم اختر «إضافة إلى الشاشة الرئيسية».</p></div></div><button className="settings-danger" type="button" onClick={resetProgress}><AppIcon name="trash" size={18} />مسح النقاط والنتائج المحفوظة</button></section>
       </div>
     </div>
   )
 }
 
-function ProfileView({ stats, level, progress, accuracy, counts, resetProgress, startGame }) {
+function ProfileView({ stats, level, progress, accuracy, counts, startGame }) {
   const mostPracticed = [...categories]
     .map((category) => ({ category, ...stats.categoryStats?.[category.id], total: counts[category.id] || 0 }))
     .sort((first, second) => (second.answered || 0) - (first.answered || 0))
     .slice(0, 5)
 
   return (
-    <div className="page-width profile-page">
-      <section className="profile-hero">
-        <div className="profile-card">
-          <div className="profile-card__person"><span>م</span><div><small>ملف اللاعب</small><h1>مستكشف المعرفة</h1></div><button type="button" onClick={resetProgress} title="مسح التقدم">⋯</button></div>
-          <div className="level-row"><div className="level-ring" style={{ '--progress': `${progress * 3.6}deg` }}><b>{formatNumber(level)}</b><small>مستوى</small></div><div><span>المستوى {formatNumber(level)}</span><h2>كل إجابة صحيحة تصنع فرقًا</h2><div className="xp-bar"><i style={{ width: `${progress}%` }} /></div><small>{formatNumber(Math.round(progress * 9))} / 900 نقطة للمستوى التالي</small></div></div>
-        </div>
-        <div className="profile-quote"><span>“</span><p>العلم ليس حفظ إجابات، بل عادة سؤال لا تتوقف.</p><small>رسالة معارف اليومية ✦</small></div>
-      </section>
+    <div className="app-page profile-screen">
+      <section className="player-card"><div className="player-card__top"><span className="player-card__avatar">م</span><div><small>ملف اللاعب</small><h1>مستكشف المعرفة</h1><p>تعلّم يومًا بعد يوم، والسجل محفوظ على جهازك.</p></div></div><div className="level-progress"><div className="level-progress__number"><b>{formatNumber(level)}</b><small>مستوى</small></div><div><span>المستوى {formatNumber(level)}</span><strong>كل إجابة صحيحة تقرّبك للمرحلة التالية</strong><div className="progress-track"><i style={{ width: `${progress}%` }} /></div><small>{formatNumber(Math.round(progress * 9))} من ٩٠٠ نقطة</small></div></div></section>
 
-      <section className="profile-stats">
-        <StatCard icon="✦" value={formatNumber(stats.totalPoints)} label="إجمالي النقاط" tone="purple" />
-        <StatCard icon="✓" value={`${formatNumber(accuracy)}%`} label="دقة إجاباتك" tone="green" />
-        <StatCard icon="🏁" value={formatNumber(stats.sessions)} label="جولات مكتملة" tone="orange" />
-        <StatCard icon="🔥" value={formatNumber(stats.dailyBest)} label="أفضل تحدٍ يومي" tone="pink" />
-      </section>
+      <section className="stat-grid"><StatCard icon="spark" value={formatNumber(stats.totalPoints)} label="إجمالي النقاط" tone="violet" /><StatCard icon="check-circle" value={`${formatNumber(accuracy)}٪`} label="دقة الإجابات" tone="mint" /><StatCard icon="trophy" value={formatNumber(stats.sessions)} label="جولات مكتملة" tone="amber" /><StatCard icon="calendar" value={formatNumber(stats.dailyBest)} label="أفضل تحدٍ يومي" tone="blue" /></section>
 
-      <section className="progress-card section">
-        <SectionHeading overline="رحلتك التعليمية" title="الفئات التي استكشفتها" />
-        <div className="progress-list">
-          {mostPracticed.map(({ category, answered = 0, correct = 0, total }) => {
-            const value = answered ? Math.min(100, (correct / Math.max(answered, 1)) * 100) : 0
-            return <div className="progress-list__item" key={category.id}><span className="progress-list__emoji">{category.emoji}</span><div><div><b>{category.title}</b><small>{formatNumber(answered)} إجابة • {formatNumber(correct)} صحيحة</small></div><div className="thin-bar"><i style={{ width: `${value}%`, background: category.accent }} /></div></div><button type="button" onClick={() => startGame({ mode: 'practice', category: category.id, count: 10 })}>جولة ←</button></div>
-          })}
-        </div>
-      </section>
+      <section className="profile-progress"><AppSectionHeading eyebrow="رحلتك التعليمية" title="الفئات التي استكشفتها" /><div className="progress-list">{mostPracticed.map(({ category, answered = 0, correct = 0 }) => { const value = answered ? Math.min(100, (correct / Math.max(answered, 1)) * 100) : 0; return <div className="progress-list__item" key={category.id}><span className="progress-list__icon" style={{ '--accent': category.accent }}><CategoryIcon category={category} size={21} /></span><div className="progress-list__body"><div><b>{category.title}</b><small>{formatNumber(answered)} إجابة · {formatNumber(correct)} صحيحة</small></div><div className="thin-progress"><i style={{ width: `${value}%`, background: category.accent }} /></div></div><button type="button" aria-label={`ابدأ جولة في ${category.title}`} onClick={() => startGame({ mode: 'practice', category: category.id, count: 10 })}><AppIcon name="play" size={17} /></button></div>})}</div></section>
     </div>
   )
 }
 
 function StatCard({ icon, value, label, tone }) {
-  return <div className={`stat-card stat-card--${tone}`}><span>{icon}</span><div><b>{value}</b><small>{label}</small></div></div>
+  return <article className={`stat-card stat-card--${tone}`}><span><AppIcon name={icon} size={21} /></span><div><b>{value}</b><small>{label}</small></div></article>
 }
 
 function QuizView({ session, timerPaused, answerQuestion, nextQuestion, abandonSession }) {
@@ -1176,66 +1235,64 @@ function QuizView({ session, timerPaused, answerQuestion, nextQuestion, abandonS
   const currentCategory = categoryMap[current.category] || categoryMap.science
   const selected = session.selectedAnswer
   const isCorrect = selected && sameAnswer(selected, current.answer)
-  const completedPercent = ((session.currentIndex) / session.questions.length) * 100
-  const modeLabel = {
-    practice: 'تدريب حر',
-    test: 'اختبار المعرفة',
-    sprint: 'تحدي البرق',
-    daily: 'تحدي اليوم',
-  }[session.mode] || 'جلسة معرفة'
-  const autoAdvancePercent = selected && session.autoAdvanceMs
-    ? Math.max(0, Math.min(100, (session.autoAdvanceRemaining / session.autoAdvanceMs) * 100))
-    : 0
+  const completedPercent = ((session.currentIndex + (selected ? 1 : 0)) / session.questions.length) * 100
+  const modeLabel = { practice: 'تدريب حر', test: 'اختبار المعرفة', sprint: 'تحدي البرق', daily: 'تحدي اليوم' }[session.mode] || 'جلسة معرفة'
+  const autoAdvancePercent = selected && session.autoAdvanceMs ? Math.max(0, Math.min(100, (session.autoAdvanceRemaining / session.autoAdvanceMs) * 100)) : 0
   const secondsToNext = Math.max(1, Math.ceil(session.autoAdvanceRemaining / 1000))
   const timerIsPaused = timerPaused && Boolean(session.duration)
 
   return (
-    <div className="quiz-shell">
-      <header className="quiz-header page-width">
-        <button type="button" className="quiz-exit" onClick={abandonSession}>× <span>إنهاء</span></button>
-        <div className="quiz-category"><span>{currentCategory.emoji}</span><div><small>{modeLabel}</small><b>{currentCategory.title}</b></div></div>
-        <div className={`quiz-timer ${session.duration && session.secondsLeft <= 20 && !timerIsPaused ? 'is-urgent' : ''} ${timerIsPaused ? 'is-paused' : ''}`} aria-live="polite"><span>{timerIsPaused ? '⏸' : session.duration ? '⏱' : '∞'}</span><div><b>{session.duration ? formatTime(session.secondsLeft) : 'بدون وقت'}</b>{timerIsPaused && <small>متوقف مؤقتًا</small>}</div></div>
-      </header>
+    <div className="quiz-screen">
+      <header className="quiz-app-bar quiz-header"><button type="button" className="quiz-close" onClick={abandonSession} aria-label="إنهاء المسابقة"><AppIcon name="close" size={23} /></button><div className="quiz-app-bar__title"><small>{modeLabel}</small><b>{currentCategory.title}</b></div><div className={`quiz-timer ${session.duration && session.secondsLeft <= 20 && !timerIsPaused ? 'is-urgent' : ''} ${timerIsPaused ? 'is-paused' : ''}`} aria-live="polite"><AppIcon name={timerIsPaused ? 'pause' : session.duration ? 'clock' : 'infinity'} size={18} /><span>{session.duration ? formatTime(session.secondsLeft) : 'بدون وقت'}</span></div></header>
 
-      <main className="quiz-content page-width">
-        <div className="quiz-progress-row"><span>السؤال {formatNumber(session.currentIndex + 1)} من {formatNumber(session.questions.length)}</span><span>{formatNumber(session.score)} نقطة</span></div>
-        <div className="quiz-progress"><i style={{ width: `${completedPercent}%` }} /></div>
+      <main className="quiz-content app-page">
+        <div className="quiz-progress-meta"><span>السؤال {formatNumber(session.currentIndex + 1)} من {formatNumber(session.questions.length)}</span><strong>{formatNumber(session.score)} نقطة</strong></div><div className="quiz-progress"><i style={{ width: `${completedPercent}%` }} /></div>
 
         <section className={`question-card ${selected ? (isCorrect ? 'is-correct' : 'is-wrong') : ''}`} data-difficulty={current.difficulty} data-question-id={current.id}>
-          <div className="question-card__top"><div className="question-card__meta"><span className="question-number">{String(session.currentIndex + 1).padStart(2, '0')}</span><span className={`question-difficulty question-difficulty--${current.difficulty}`}>{DIFFICULTY_LABELS[current.difficulty] || 'متوسط'}</span></div><span className="question-emoji">{currentCategory.emoji}</span></div>
+          <div className="question-card__meta"><span className="question-category-icon" style={{ '--accent': currentCategory.accent }}><CategoryIcon category={currentCategory} size={21} /></span><span className={`difficulty-chip difficulty-chip--${current.difficulty}`}>{DIFFICULTY_LABELS[current.difficulty] || 'متوسط'}</span></div>
           <h1>{current.question}</h1>
-          <div className="options-grid">
+          <div className="options-list options-grid" role="group" aria-label="خيارات الإجابة">
             {current.options.map((option, index) => {
               const optionValue = typeof option === 'string' ? option : option.value
               const optionLabel = typeof option === 'string' ? option : option.label
               const optionCorrect = sameAnswer(optionValue, current.answer)
               const optionSelected = sameAnswer(optionValue, selected)
               let className = 'option-button'
-              if (selected) {
-                if (optionCorrect) className += ' is-correct'
-                else if (optionSelected) className += ' is-wrong'
-              }
-              return <button key={`${optionValue}-${index}`} type="button" disabled={Boolean(selected)} className={className} onClick={() => answerQuestion(optionValue)}><span>{LETTERS[index]}</span><b>{optionLabel}</b><i>{selected && optionCorrect ? '✓' : selected && optionSelected ? '×' : ''}</i></button>
+              if (selected) { if (optionCorrect) className += ' is-correct'; else if (optionSelected) className += ' is-wrong' }
+              return <button key={`${optionValue}-${index}`} type="button" disabled={Boolean(selected)} aria-pressed={optionSelected} className={className} onClick={() => answerQuestion(optionValue)}><span className="option-button__letter">{LETTERS[index]}</span><b>{optionLabel}</b><span className="option-button__state">{selected && optionCorrect ? <AppIcon name="check" size={20} /> : selected && optionSelected ? <AppIcon name="close" size={19} /> : null}</span></button>
             })}
           </div>
-          {selected && <div className={`answer-feedback ${isCorrect ? 'is-correct' : 'is-wrong'}`}><span>{isCorrect ? '🎉' : '💡'}</span><div><b>{isCorrect ? 'إجابة رائعة!' : 'ليست الإجابة الصحيحة هذه المرة.'}</b><p>{isCorrect ? <>أحسنت، أضفت نقاطًا جديدة إلى رصيدك.{current.answerKind === 'currency' && <> الاسم الرسمي للعملة: <strong>{current.answer}</strong>.</>}</> : <>الإجابة الصحيحة: <strong>{current.answer}</strong></>}</p></div></div>}
-          {selected && session.autoAdvanceEnabled && <div className="auto-advance" role="status" aria-live="polite"><div className="auto-advance__row"><span>سيتم الانتقال تلقائيًا إلى السؤال التالي</span><b>{timerPaused ? 'متوقف مؤقتًا' : `خلال ${formatNumber(secondsToNext)} ثوانٍ`}</b></div><div className="auto-advance__bar"><i style={{ width: `${autoAdvancePercent}%` }} /></div></div>}
-          {selected && !session.autoAdvanceEnabled && <div className="manual-advance-note">الانتقال اليدوي مفعّل — اختر «السؤال التالي» عندما تكون جاهزًا.</div>}
+          {selected && <div className={`answer-feedback ${isCorrect ? 'is-correct' : 'is-wrong'}`} role="status"><span><AppIcon name={isCorrect ? 'check-circle' : 'info'} size={23} /></span><div><b>{isCorrect ? 'إجابة صحيحة، أحسنت!' : 'الإجابة الصحيحة'}</b><p>{isCorrect ? <>أضفت نقاطًا جديدة إلى رصيدك.{current.answerKind === 'currency' && <> الاسم الرسمي للعملة: <strong>{current.answer}</strong>.</>}</> : <><strong>{current.answer}</strong></>}</p></div></div>}
+          {selected && session.autoAdvanceEnabled && <div className="auto-advance" role="status" aria-live="polite"><div><span><AppIcon name="forward" size={17} />الانتقال إلى السؤال التالي</span><b>{timerPaused ? 'متوقف مؤقتًا' : `خلال ${formatNumber(secondsToNext)} ث`}</b></div><i><em style={{ width: `${autoAdvancePercent}%` }} /></i></div>}
+          {selected && !session.autoAdvanceEnabled && <div className="manual-advance-note"><AppIcon name="info" size={18} />الانتقال اليدوي مفعّل. تابع عندما تكون جاهزًا.</div>}
         </section>
-
-        <div className="quiz-actions"><div><span>{session.duration ? 'سرعة إجابتك تمنحك نقاطًا إضافية' : 'خذ وقتك وفكّر بهدوء'}</span></div>{selected && <button className="button button--primary" type="button" onClick={nextQuestion}>{session.currentIndex + 1 === session.questions.length ? 'عرض النتيجة' : 'السؤال التالي'} <span>←</span></button>}</div>
       </main>
+
+      <footer className="quiz-bottom"><div>{selected ? <span>{session.duration ? 'سرعة إجابتك تمنحك نقاطًا إضافية' : 'خذ وقتك وفكّر بهدوء'}</span> : <span><AppIcon name="info" size={18} />اختر الإجابة التي تراها صحيحة</span>}</div>{selected && <button className="app-button app-button--primary" type="button" onClick={nextQuestion}>{session.currentIndex + 1 === session.questions.length ? 'عرض النتيجة' : 'السؤال التالي'}<AppIcon name="arrow" size={19} /></button>}</footer>
     </div>
   )
 }
 
-function ResultView({ result, startGame, navigate }) {
+function ResultMetric({ icon, label, value }) {
+  return <div className="result-metric"><span><AppIcon name={icon} size={21} /></span><div><b>{value}</b><small>{label}</small></div></div>
+}
+
+function ResultView({ result, startGame, navigate, onShare }) {
   const total = result.questions.length
   const percent = Math.round((result.correctCount / total) * 100)
-  const title = percent >= 85 ? 'مذهل! أنت متألق.' : percent >= 60 ? 'نتيجة قوية، واصل.' : 'بداية جميلة، جرّب جولة أخرى.'
-  const emoji = percent >= 85 ? '🏆' : percent >= 60 ? '🌟' : '🚀'
+  const incorrect = Math.max(0, result.answeredCount - result.correctCount)
+  const elapsedSeconds = result.duration
+    ? Math.max(0, result.duration - result.secondsLeft)
+    : Math.max(0, Math.round(((result.finishedAt || Date.now()) - result.startedAt) / 1000))
+  const title = percent >= 85 ? 'أداء مميز!' : percent >= 60 ? 'نتيجة قوية!' : 'جولة جيدة!'
   const category = result.category === 'all' ? null : categoryMap[result.category]
-  return <div className="result-page page-width"><section className="result-card"><div className="result-card__confetti">✦ ✧ · ✦</div><span className="result-card__emoji">{emoji}</span><small>{result.endReason === 'time' ? 'انتهى الوقت' : 'اكتملت الجولة'}</small><h1>{title}</h1><p>{category ? `أنهيت جولة في فئة ${category.title}.` : 'أنهيت جولة متنوعة من بنك معارف.'}</p><div className="result-score"><div><b>{formatNumber(result.score)}</b><span>نقطة</span></div><i /><div><b>{formatNumber(result.correctCount)} / {formatNumber(total)}</b><span>إجابة صحيحة</span></div><i /><div><b>{formatNumber(percent)}%</b><span>نسبة النجاح</span></div></div><div className="result-actions"><button className="button button--primary" type="button" onClick={() => startGame(result.config)}>أعد المحاولة <span>↻</span></button><button className="button button--soft" type="button" onClick={() => navigate('categories')}>فئة أخرى ←</button></div></section><section className="result-tip"><span>💡</span><div><b>نصيحة معارف</b><p>التكرار الذكي يصنع فرقًا: جرب فئة جديدة ثم عد إلى الفئة نفسها غدًا.</p></div></section></div>
+
+  return (
+    <div className="result-screen app-page"><section className="result-hero"><button type="button" className="result-share" onClick={onShare} aria-label="مشاركة النتيجة"><AppIcon name="share" size={21} /></button><div className="result-hero__badge"><AppIcon name={percent >= 85 ? 'trophy' : 'medal'} size={37} /></div><small>{result.endReason === 'time' ? 'انتهى الوقت' : 'اكتملت الجولة'}</small><h1>{title}</h1><p>{category ? `أنهيت جولة في ${category.title}.` : 'أنهيت جولة متنوعة من بنك معارف.'}</p><div className="result-score"><b>{formatNumber(result.score)}</b><span>نقطة مكتسبة</span></div></section>
+      <section className="result-metrics"><ResultMetric icon="check-circle" label="إجابات صحيحة" value={`${formatNumber(result.correctCount)} / ${formatNumber(total)}`} /><ResultMetric icon="wrong" label="إجابات غير صحيحة" value={formatNumber(incorrect)} /><ResultMetric icon="chart" label="نسبة النجاح" value={`${formatNumber(percent)}٪`} /><ResultMetric icon="clock" label="وقت الجولة" value={formatTime(elapsedSeconds)} /></section>
+      <section className="result-actions"><button className="app-button app-button--primary" type="button" onClick={() => startGame(result.config)}><AppIcon name="refresh" size={19} />أعد المحاولة</button><button className="app-button app-button--tonal" type="button" onClick={() => navigate('categories')}>فئة أخرى<AppIcon name="arrow" size={19} /></button><button className="app-button app-button--text" type="button" onClick={() => navigate('home')}>العودة للرئيسية</button></section>
+    </div>
+  )
 }
 
 export default App

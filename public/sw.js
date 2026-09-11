@@ -1,4 +1,4 @@
-const CACHE_NAME = 'maaref-pwa-v4'
+const CACHE_NAME = 'maaref-pwa-v5'
 const CACHE_PREFIX = 'maaref-pwa-'
 const scope = new URL(self.registration.scope)
 const BASE_URL = scope.href
