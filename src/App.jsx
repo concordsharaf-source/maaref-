@@ -24,7 +24,6 @@ const defaultSettings = {
   theme: 'light',
   autoAdvance: true,
   autoAdvanceSeconds: 3,
-  showExtraInfo: true,
   questionTextSize: 'comfortable',
   reduceMotion: false,
 }
@@ -49,11 +48,9 @@ function readSettings() {
       : defaultSettings.autoAdvanceSeconds
     return {
       ...defaultSettings,
-      ...saved,
       theme: saved.theme === 'dark' ? 'dark' : 'light',
       autoAdvance: typeof saved.autoAdvance === 'boolean' ? saved.autoAdvance : defaultSettings.autoAdvance,
       autoAdvanceSeconds,
-      showExtraInfo: typeof saved.showExtraInfo === 'boolean' ? saved.showExtraInfo : defaultSettings.showExtraInfo,
       questionTextSize: saved.questionTextSize === 'large' ? 'large' : 'comfortable',
       reduceMotion: typeof saved.reduceMotion === 'boolean' ? saved.reduceMotion : defaultSettings.reduceMotion,
     }
@@ -318,108 +315,12 @@ const fallbackOptions = {
   'religion-definition': ['الجهة التي يتوجه إليها المسلم في الصلاة', 'الإقرار بوحدانية الله ورسالة محمد'],
 }
 
-// شروح قصيرة مرتبطة بكل سؤال إسلامي، حتى لا تتحول بطاقة «المعلومة الإضافية» إلى نص عام مكرر.
-const religionLearningNotes = {
-  'islamic-10001': { title: 'كتاب الإسلام', text: 'القرآن الكريم هو كتاب المسلمين، ويُقسَّم إلى ثلاثين جزءًا لتيسير القراءة والمراجعة.' },
-  'islamic-10002': { title: 'أركان الإسلام', text: 'الأركان خمسة: الشهادتان، الصلاة، الزكاة، الصيام، والحج.' },
-  'islamic-10003': { title: 'أول الأركان', text: 'الشهادتان هما الركن الأول من أركان الإسلام، وتجمعان الإيمان بوحدانية الله ورسالة محمد ﷺ.' },
-  'islamic-10004': { title: 'عبادة يومية', text: 'الصلاة فريضة تتكرر خمس مرات يوميًا، وهي الركن العملي المتكرر في يوم المسلم.' },
-  'islamic-10005': { title: 'حق مالي واجب', text: 'الزكاة عبادة مالية تؤدى بشروطها، وتصل إلى المستحقين وتطهر المال.' },
-  'islamic-10006': { title: 'صيام رمضان', text: 'الصيام ركن من أركان الإسلام، ويكون في شهر رمضان من الفجر إلى غروب الشمس.' },
-  'islamic-10007': { title: 'حج المستطيع', text: 'الحج يقصده المسلم القادر إلى مكة، ويجب مرة واحدة في العمر لمن استطاع إليه سبيلًا.' },
-  'islamic-10008': { title: 'الصلوات المفروضة', text: 'الصلوات الخمس هي: الفجر، الظهر، العصر، المغرب، والعشاء.' },
-  'islamic-10009': { title: 'قبلة المسلمين', text: 'الكعبة المشرفة تقع في المسجد الحرام بمكة، ويتجه إليها المسلمون في صلاتهم.' },
-  'islamic-10010': { title: 'مكة المكرمة', text: 'في مكة المسجد الحرام والكعبة المشرفة، وهي مقصد الحج والعمرة.' },
-  'islamic-10011': { title: 'المدينة المنورة', text: 'يقع المسجد النبوي في المدينة المنورة، وهي مدينة هجرة النبي محمد ﷺ.' },
-  'islamic-10012': { title: 'المسجد الأقصى', text: 'يقع المسجد الأقصى في القدس، وهو أولى القبلتين وثالث المساجد التي تُشد إليها الرحال.' },
-  'islamic-10013': { title: 'شهر الصيام', text: 'رمضان هو الشهر التاسع هجريًا، وفيه يصوم المسلمون ويكثرون من العبادة.' },
-  'islamic-10014': { title: 'فرحة ختام الصيام', text: 'يأتي عيد الفطر بعد اكتمال صيام رمضان، وتسبقه زكاة الفطر.' },
-  'islamic-10015': { title: 'عيد موسم الحج', text: 'يأتي عيد الأضحى في أيام الحج، ويرتبط بأضحية العيد لمن قدر عليها.' },
-  'islamic-10016': { title: 'بداية السنة الهجرية', text: 'محرم هو أول شهور السنة الهجرية، وهي سنة تعتمد على التقويم القمري.' },
-  'islamic-10017': { title: 'سنة قمرية', text: 'السنة الهجرية تتكون من اثني عشر شهرًا قمريًا.' },
-  'islamic-10018': { title: 'بداية التأريخ الهجري', text: 'يبدأ التأريخ الهجري بهجرة النبي محمد ﷺ من مكة إلى المدينة المنورة.' },
-  'islamic-10019': { title: 'ملك الوحي', text: 'جبريل عليه السلام هو الملك الذي نزل بالوحي على الأنبياء، ومنهم النبي محمد ﷺ.' },
-  'islamic-10020': { title: 'فاتحة الكتاب', text: 'سورة الفاتحة أول سورة في ترتيب المصحف، وتُقرأ في كل ركعة من الصلاة.' },
-  'islamic-10021': { title: 'أطول سور القرآن', text: 'سورة البقرة هي أطول سور القرآن الكريم، وترتيبها الثاني في المصحف.' },
-  'islamic-10022': { title: 'أجزاء القرآن', text: 'يقسم القرآن الكريم إلى ثلاثين جزءًا، ويضم كل جزء حزبين.' },
-  'islamic-10023': { title: 'لغة الوحي', text: 'نزل القرآن الكريم باللغة العربية، ثم نُقلت معانيه إلى لغات كثيرة.' },
-  'islamic-10024': { title: 'خاتم الأنبياء', text: 'النبي محمد ﷺ هو خاتم الأنبياء في الإسلام.' },
-  'islamic-10025': { title: 'مولد النبي', text: 'وُلد النبي محمد ﷺ في مكة المكرمة قبل الهجرة إلى المدينة.' },
-  'islamic-10026': { title: 'مدينة الهجرة', text: 'هاجر النبي محمد ﷺ من مكة إلى المدينة المنورة، ومنها بدأ التأريخ الهجري.' },
-  'islamic-10027': { title: 'رحلة الإسراء', text: 'الإسراء هو انتقال النبي محمد ﷺ ليلًا من المسجد الحرام إلى المسجد الأقصى.' },
-  'islamic-10028': { title: 'بداية الإسراء', text: 'بدأت رحلة الإسراء من المسجد الحرام في مكة وانتهت إلى المسجد الأقصى.' },
-  'islamic-10029': { title: 'ماء زمزم', text: 'بئر زمزم بئر مشهورة قريبة من الكعبة المشرفة في المسجد الحرام.' },
-  'islamic-10030': { title: 'شهر الحج', text: 'يؤدى الحج في شهر ذي الحجة، وهو آخر شهور السنة الهجرية.' },
-  'islamic-10031': { title: 'يوم عرفة', text: 'الوقوف بعرفة يكون في اليوم التاسع من ذي الحجة، وهو من أعظم مناسك الحج.' },
-  'islamic-10032': { title: 'تهيؤ للصلاة', text: 'الوضوء طهارة بالماء تسبق الصلاة غالبًا، وله فرائض وآداب معروفة.' },
-  'islamic-10033': { title: 'نداء الصلاة', text: 'الأذان نداء يعلن دخول وقت الصلاة ويدعو الناس إليها.' },
-  'islamic-10034': { title: 'مهمة المؤذن', text: 'المؤذن هو من يرفع الأذان لإعلام الناس بدخول وقت الصلاة.' },
-  'islamic-10035': { title: 'يوم الجمعة', text: 'تقام صلاة الجمعة في يوم الجمعة، وهي شعيرة أسبوعية للمسلمين.' },
-  'islamic-10036': { title: 'ليالي رمضان', text: 'تُطلب ليلة القدر في العشر الأواخر من رمضان، ولا سيما الليالي الوترية.' },
-  'islamic-10037': { title: 'زكاة الفطر', text: 'تُخرج زكاة الفطر قبل صلاة عيد الفطر لتصل إلى مستحقيها في وقتها.' },
-  'islamic-10038': { title: 'الطواف', text: 'الطواف هو الدوران حول الكعبة سبعة أشواط في الحج أو العمرة.' },
-  'islamic-10039': { title: 'شعيرة السعي', text: 'يكون السعي سبعة أشواط بين الصفا والمروة ضمن الحج أو العمرة.' },
-  'islamic-10040': { title: 'بداية النسك', text: 'الإحرام هو نية الدخول في النسك مع الالتزام بمحظورات مخصوصة.' },
-  'islamic-10041': { title: 'بداية الفجر', text: 'يبدأ وقت الفجر عند طلوع الفجر الصادق قبل شروق الشمس.' },
-  'islamic-10042': { title: 'وقت المغرب', text: 'يدخل وقت صلاة المغرب بعد غروب الشمس مباشرة.' },
-  'islamic-10043': { title: 'فريضة الفجر', text: 'فريضة الفجر ركعتان، وتسبقها سنة مؤكدة ركعتان.' },
-  'islamic-10044': { title: 'فريضة الظهر', text: 'عدد ركعات الظهر المفروضة أربع ركعات.' },
-  'islamic-10045': { title: 'فريضة العصر', text: 'عدد ركعات العصر المفروضة أربع ركعات.' },
-  'islamic-10046': { title: 'فريضة المغرب', text: 'عدد ركعات المغرب المفروضة ثلاث ركعات.' },
-  'islamic-10047': { title: 'فريضة العشاء', text: 'عدد ركعات العشاء المفروضة أربع ركعات.' },
-  'islamic-10048': { title: 'ركن في الصلاة', text: 'الركوع هو الانحناء في الصلاة بعد القراءة، ويأتي قبل السجود.' },
-  'islamic-10049': { title: 'موضع السجود', text: 'السجود هو وضع الجبهة على الأرض لله، ويأتي بعد الركوع في الصلاة.' },
-  'islamic-10050': { title: 'البسملة', text: 'تبدأ معظم سور القرآن بعبارة بسم الله الرحمن الرحيم، باستثناء سورة التوبة.' },
-  'islamic-10051': { title: 'المعوذتان', text: 'المعوذتان هما سورتا الفلق والناس، وتُقرآن للاستعاذة بالله.' },
-  'islamic-10052': { title: 'سفينة نوح', text: 'صنع نوح عليه السلام السفينة بأمر الله، وهي من أشهر قصص الأنبياء في القرآن.' },
-  'islamic-10053': { title: 'خليل الله', text: 'لقب خليل الله يطلق على إبراهيم عليه السلام.' },
-  'islamic-10054': { title: 'كتاب موسى', text: 'أنزلت التوراة على موسى عليه السلام.' },
-  'islamic-10055': { title: 'كتاب داود', text: 'أنزل الزبور على داود عليه السلام.' },
-  'islamic-10056': { title: 'كتاب عيسى', text: 'أنزل الإنجيل على عيسى عليه السلام.' },
-  'islamic-10057': { title: 'تعبير الرؤى', text: 'اشتهر يوسف عليه السلام بتعبير الرؤى، ومن قصصه رؤيا الملك في القرآن.' },
-  'islamic-10058': { title: 'قصة يونس', text: 'ابتلع الحوت يونس عليه السلام ثم نجا بعد أن دعا الله.' },
-  'islamic-10059': { title: 'مثال الصبر', text: 'يضرب المثل بصبر أيوب عليه السلام عند الشدائد.' },
-  'islamic-10060': { title: 'مريم وعيسى', text: 'مريم عليها السلام هي والدة عيسى عليه السلام، وتحمل إحدى سور القرآن اسمها.' },
-  'islamic-10061': { title: 'والد إسماعيل', text: 'إبراهيم عليه السلام والد إسماعيل عليه السلام، ويرتبط اسمه ببناء الكعبة مع ابنه إسماعيل.' },
-  'islamic-10062': { title: 'إسحاق وإبراهيم', text: 'إسحاق عليه السلام من أبناء إبراهيم عليه السلام المذكورين في القرآن.' },
-  'islamic-10063': { title: 'هاجر وإسماعيل', text: 'هاجر عليها السلام أم إسماعيل في التراث الإسلامي، ويرتبط السعي بين الصفا والمروة بقصتها.' },
-  'islamic-10064': { title: 'أبو البشر', text: 'آدم عليه السلام هو أول البشر في الإسلام.' },
-  'islamic-10065': { title: 'حواء وآدم', text: 'حواء هي زوجة آدم في التراث الإسلامي.' },
-  'islamic-10066': { title: 'معنى الإخلاص', text: 'سورة الإخلاص تؤكد توحيد الله وتنزيهه، وهي من قصار السور.' },
-  'islamic-10067': { title: 'معنى القبلة', text: 'القبلة هي الجهة التي يتجه إليها المسلم في الصلاة، وهي جهة الكعبة المشرفة.' },
-  'islamic-10068': { title: 'التقويم الهجري', text: 'التقويم الهجري قمري؛ لذلك تتغير مواسمه بالنسبة إلى السنة الميلادية.' },
-  'islamic-10069': { title: 'طول رمضان', text: 'شهر رمضان شهر قمري، لذلك يكون تسعة وعشرين أو ثلاثين يومًا.' },
-  'islamic-10070': { title: 'شرط الحج', text: 'الاستطاعة هي الشرط العام لوجوب الحج، وتشمل القدرة المالية والبدنية وأمن الطريق.' },
-  'islamic-10071': { title: 'ما يفطر الصائم', text: 'المفطرات هي ما يفسد الصيام، ومن أمثلتها الأكل والشرب عمدًا في وقت الصوم.' },
-  'islamic-10072': { title: 'ثمرة الصيام', text: 'الصيام ليس امتناعًا عن الطعام فقط؛ ومن مقاصده تهذيب النفس وتقوية التقوى.' },
-  'islamic-10073': { title: 'مسجد قباء', text: 'مسجد قباء من المساجد المرتبطة بهجرة النبي ﷺ إلى المدينة المنورة.' },
-  'islamic-10074': { title: 'المسجد الحرام', text: 'المسجد الحرام في مكة يضم الكعبة المشرفة، وهو قبلة المسلمين.' },
-  'islamic-10075': { title: 'المسجد النبوي', text: 'بنى النبي محمد ﷺ المسجد النبوي في المدينة المنورة بعد الهجرة.' },
-  'islamic-10076': { title: 'الاعتكاف', text: 'المعتكف هو من يلزم المسجد للعبادة مدة من الزمن.' },
-  'islamic-10077': { title: 'عبارة الدخول في الإسلام', text: 'الشهادتان تتضمنان الشهادة أن لا إله إلا الله وأن محمدًا رسول الله.' },
-  'islamic-10078': { title: 'الشهادتان: أصل الإيمان', text: 'الشهادتان هما الركن الأول من أركان الإسلام، وتجمعان الإيمان بوحدانية الله ورسالة محمد ﷺ.' },
-  'islamic-10079': { title: 'سورة مريم', text: 'سميت سورة مريم بهذا الاسم لورود قصة مريم عليها السلام فيها بتفصيل.' },
-  'islamic-10080': { title: 'ليلة القدر', text: 'ليلة القدر ليلة مباركة من ليالي رمضان، ونزل فيها القرآن كما ورد في القرآن الكريم.' },
-  'islamic-10081': { title: 'القبلة الأولى', text: 'كان المسجد الأقصى القبلة الأولى للمسلمين قبل التحول إلى الكعبة المشرفة.' },
-}
-
 function clamp(value, minimum, maximum) {
   return Math.max(minimum, Math.min(maximum, value))
 }
 
 function trimFact(value = '') {
   return String(value).replace(/[.؟?]+$/u, '').trim()
-}
-
-function factKey(value = '') {
-  return normalizeQuestion(trimFact(value))
-}
-
-function getFactRecord(map, label, labelName) {
-  const key = factKey(label)
-  if (!key) return null
-  if (!map.has(key)) map.set(key, { [labelName]: trimFact(label) })
-  return map.get(key)
 }
 
 function estimateQuestionDifficulty(question) {
@@ -442,196 +343,10 @@ function estimateQuestionDifficulty(question) {
   return clamp(difficulty, 1, 5)
 }
 
-function buildKnowledgeLinks(questions) {
-  const countries = new Map()
-  const cities = new Map()
-  const elements = new Map()
-  const booksByTitle = new Map()
-  const booksByAuthor = new Map()
-  const filmsByTitle = new Map()
-  const filmsByDirector = new Map()
-
-  const addBook = (title, author) => {
-    const record = { title: trimFact(title), author: trimFact(author) }
-    const titleKey = factKey(title)
-    const authorKey = factKey(author)
-    if (titleKey && !booksByTitle.has(titleKey)) booksByTitle.set(titleKey, record)
-    if (authorKey && !booksByAuthor.has(authorKey)) booksByAuthor.set(authorKey, record)
-  }
-
-  const addFilm = (title, director) => {
-    const record = { title: trimFact(title), director: trimFact(director) }
-    const titleKey = factKey(title)
-    const directorKey = factKey(director)
-    if (titleKey && !filmsByTitle.has(titleKey)) filmsByTitle.set(titleKey, record)
-    if (directorKey && !filmsByDirector.has(directorKey)) filmsByDirector.set(directorKey, record)
-  }
-
-  questions.forEach((item) => {
-    const question = String(item.question || '').trim()
-    const answer = trimFact(item.answer)
-    if (!question || !answer) return
-
-    if (item.category === 'geography') {
-      let match = question.match(/^ما عاصمة (.+?)[؟?]$/u)
-      if (match) getFactRecord(countries, match[1], 'country').capital = answer
-
-      match = question.match(/^(.+?) عاصمة لأي دولة[؟?]$/u)
-      if (match) getFactRecord(countries, answer, 'country').capital = trimFact(match[1])
-
-      match = question.match(/^اذكر عملة رسمية مستخدمة في (.+?)[.؟?]$/u)
-      if (match) getFactRecord(countries, match[1], 'country').currency = answer
-
-      match = question.match(/^في أي دولة تقع مدينة (.+?)[؟?]$/u)
-      if (match) getFactRecord(cities, match[1], 'city').country = answer
-
-      if (sameAnswer(answer, 'صحيح.')) {
-        match = question.match(/^صح أم خطأ:\s*عاصمة (.+?) هي (.+?)[.؟?]$/u)
-        if (match) getFactRecord(countries, match[1], 'country').capital = trimFact(match[2])
-
-        match = question.match(/^صح أم خطأ:\s*تُستخدم (.+?) عملةً رسمية في (.+?)[.؟?]$/u)
-        if (match) getFactRecord(countries, match[2], 'country').currency = trimFact(match[1])
-
-        match = question.match(/^صح أم خطأ:\s*تقع مدينة (.+?) في (.+?)[.؟?]$/u)
-        if (match) getFactRecord(cities, match[1], 'city').country = trimFact(match[2])
-      }
-    }
-
-    if (item.category === 'science') {
-      let match = question.match(/^ما الرمز الكيميائي لعنصر (.+?)[؟?]$/u)
-      if (match) getFactRecord(elements, match[1], 'element').symbol = answer
-
-      match = question.match(/^ما العدد الذري لعنصر (.+?)[؟?]$/u)
-      if (match) getFactRecord(elements, match[1], 'element').atomicNumber = answer
-
-      match = question.match(/^ما العنصر الذي عدده الذري (.+?)[؟?]$/u)
-      if (match) getFactRecord(elements, answer, 'element').atomicNumber = trimFact(match[1])
-
-      match = question.match(/^ما اسم العنصر الذي رمزه الكيميائي (.+?)[؟?]$/u)
-      if (match) getFactRecord(elements, answer, 'element').symbol = trimFact(match[1])
-    }
-
-    if (item.category === 'arts') {
-      let match = question.match(/^من مؤلف كتاب «(.+)»[؟?]$/u)
-      if (match) addBook(match[1], answer)
-      match = question.match(/^اذكر كتابًا من تأليف (.+?)[.؟?]$/u)
-      if (match) addBook(answer, match[1])
-    }
-
-    if (item.category === 'culture') {
-      let match = question.match(/^من مخرج فيلم «(.+)»[؟?]$/u)
-      if (match) addFilm(match[1], answer)
-      match = question.match(/^اذكر فيلمًا من إخراج (.+?)[.؟?]$/u)
-      if (match) addFilm(answer, match[1])
-    }
-  })
-
-  return { countries, cities, elements, booksByTitle, booksByAuthor, filmsByTitle, filmsByDirector }
-}
-
-const knowledgeLinks = buildKnowledgeLinks(questionBank)
-
-function geographyCountryFor(question) {
-  const text = String(question.question || '').trim()
-  let match = text.match(/^ما عاصمة (.+?)[؟?]$/u)
-  if (match) return trimFact(match[1])
-  match = text.match(/^اذكر عملة رسمية مستخدمة في (.+?)[.؟?]$/u)
-  if (match) return trimFact(match[1])
-  match = text.match(/^(.+?) عاصمة لأي دولة[؟?]$/u)
-  if (match) return trimFact(question.answer)
-  match = text.match(/^في أي دولة تقع مدينة (.+?)[؟?]$/u)
-  if (match) return knowledgeLinks.cities.get(factKey(match[1]))?.country || trimFact(question.answer)
-  match = text.match(/عاصمة (.+?) هي /u)
-  if (match) return trimFact(match[1])
-  match = text.match(/عملةً رسمية في (.+?)[.؟?]$/u)
-  if (match) return trimFact(match[1])
-  match = text.match(/تقع مدينة .+? في (.+?)[.؟?]$/u)
-  if (match) return trimFact(match[1])
-  return ''
-}
-
-function scienceElementFor(question) {
-  const text = String(question.question || '').trim()
-  let match = text.match(/^ما الرمز الكيميائي لعنصر (.+?)[؟?]$/u)
-  if (match) return trimFact(match[1])
-  match = text.match(/^ما العدد الذري لعنصر (.+?)[؟?]$/u)
-  if (match) return trimFact(match[1])
-  if (/^ما العنصر الذي عدده الذري /u.test(text) || /^ما اسم العنصر الذي رمزه الكيميائي /u.test(text)) return trimFact(question.answer)
-  return ''
-}
-
-function buildAdditionalInfo(question) {
-  const answer = trimFact(question.answer)
-  const sourceQuestion = String(question.question || '').trim()
-  const categoryTitle = categoryMap[question.category]?.title || 'معارف'
-
-  if (question.category === 'geography') {
-    const country = geographyCountryFor(question)
-    const fact = knowledgeLinks.countries.get(factKey(country))
-    if (fact) {
-      const related = [
-        fact.capital && !sameAnswer(fact.capital, answer) ? `العاصمة: ${fact.capital}` : '',
-        fact.currency && !sameAnswer(fact.currency, answer) ? `العملة: ${fact.currency}` : '',
-      ].filter(Boolean)
-      if (related.length) return { icon: '🗺️', title: `صلة جغرافية: ${fact.country}`, text: related.join(' • ') }
-    }
-    return { icon: '🗺️', title: 'اربطها بالخريطة', text: `ثبّت «${answer}» بربط الاسم بموقعه على الخريطة؛ فالسياق المكاني يساعد على التذكر.` }
-  }
-
-  if (question.category === 'science') {
-    const element = scienceElementFor(question)
-    const fact = knowledgeLinks.elements.get(factKey(element))
-    if (fact) {
-      const related = [
-        fact.element && !sameAnswer(fact.element, answer) ? `العنصر: ${fact.element}` : '',
-        fact.symbol && !sameAnswer(fact.symbol, answer) ? `الرمز: ${fact.symbol}` : '',
-        fact.atomicNumber && !sameAnswer(fact.atomicNumber, answer) ? `العدد الذري: ${fact.atomicNumber}` : '',
-      ].filter(Boolean)
-      if (related.length) return { icon: '⚛️', title: 'بطاقة العنصر', text: related.join(' • ') }
-    }
-    return { icon: '🔬', title: 'مفتاح علمي', text: 'في العلوم، اربط المصطلح بوظيفته أو خاصيته الأساسية بدل حفظ الاسم وحده.' }
-  }
-
-  if (question.category === 'arts') {
-    const titleMatch = sourceQuestion.match(/كتاب «(.+?)»/u)
-    const book = titleMatch ? knowledgeLinks.booksByTitle.get(factKey(titleMatch[1])) : knowledgeLinks.booksByAuthor.get(factKey(answer))
-    if (book) return { icon: '📚', title: 'صلة أدبية', text: `الكتاب: «${book.title}» • المؤلف: ${book.author}` }
-    return { icon: '📚', title: 'تثبيت أدبي', text: 'اربط عنوان العمل بصاحبه؛ فالعنوان والمؤلف يُحفظان كزوج معرفي واحد.' }
-  }
-
-  if (question.category === 'culture') {
-    const titleMatch = sourceQuestion.match(/فيلم «(.+?)»/u)
-    const film = titleMatch ? knowledgeLinks.filmsByTitle.get(factKey(titleMatch[1])) : knowledgeLinks.filmsByDirector.get(factKey(answer))
-    if (film) return { icon: '🎬', title: 'صلة سينمائية', text: `الفيلم: «${film.title}» • المخرج: ${film.director}` }
-    return { icon: '🎬', title: 'تثبيت سينمائي', text: 'المخرج يقود الرؤية الفنية للعمل، لذا اربط اسم الفيلم باسم مخرجه.' }
-  }
-
-  if (question.category === 'math') {
-    if (sourceQuestion.includes('%')) return { icon: '➗', title: 'طريقة سريعة', text: 'لحساب النسبة المئوية، حوّل النسبة إلى كسر من 100 ثم اضربها في العدد.' }
-    if (/[×]/u.test(sourceQuestion)) return { icon: '✖️', title: 'طريقة سريعة', text: 'الضرب هو جمع متكرر؛ قسّم الأعداد إلى عشرات وآحاد لتسهيل الحساب الذهني.' }
-    if (/[÷]/u.test(sourceQuestion)) return { icon: '➗', title: 'طريقة سريعة', text: 'في القسمة، تحقّق من الناتج بضربه في المقسوم عليه.' }
-    return { icon: '🧮', title: 'تثبيت الحل', text: 'اكتب العملية على خطوات قصيرة ثم راجع الناتج بالعملية العكسية عند الإمكان.' }
-  }
-
-  if (question.category === 'religion') {
-    const note = religionLearningNotes[question.id]
-    if (note) return { icon: '🕌', ...note }
-    return { icon: '🕌', title: 'مراجعة إسلامية', text: `الإجابة الصحيحة هي «${answer}». راجع معناها مع سياق السؤال لتثبيت الفكرة.` }
-  }
-  if (question.category === 'language') return { icon: '✍️', title: 'تطبيق لغوي', text: 'استخدم المصطلح في جملة من إنشائك؛ التطبيق القصير أسرع طريقة لتثبيت المفاهيم اللغوية.' }
-  if (question.category === 'nature') return { icon: '🌿', title: 'رابط طبيعي', text: 'تأمل الوظيفة أو البيئة أو الصفة المرتبطة بالمفهوم؛ العلاقات تساعد على فهم الطبيعة لا حفظها فقط.' }
-  if (question.category === 'history') return { icon: '🏛️', title: 'رابط تاريخي', text: 'ضع الحدث أو المصطلح داخل سياقه الزمني؛ معرفة ما قبله وما بعده تجعل التاريخ أسهل تذكرًا.' }
-  if (question.category === 'technology') return { icon: '💻', title: 'تطبيق تقني', text: 'جرّب ربط المصطلح بمثال تستخدمه يوميًا؛ المثال العملي يوضح وظيفته بسرعة.' }
-  if (question.category === 'sports') return { icon: '🏅', title: 'معلومة رياضية', text: 'اربط المصطلح بقانون اللعبة أو هدفها الأساسي لتفهمه وتتذكره بسهولة.' }
-
-  return { icon: '💡', title: `معلومة من ${categoryTitle}`, text: 'أعد صياغة الإجابة بطريقتك؛ الشرح بكلماتك يحوّل المعلومة إلى معرفة ثابتة.' }
-}
-
 const enrichedQuestionBank = questionBank.map((question) => ({
   ...question,
   answerKind: inferAnswerKind(question),
   difficulty: estimateQuestionDifficulty(question),
-  additionalInfo: buildAdditionalInfo(question),
 }))
 
 const answerPools = enrichedQuestionBank.reduce((pools, question) => {
@@ -660,7 +375,7 @@ function uniqueRelatedAnswers(question) {
 }
 
 // تعرض العملات باسم الفئة النقدية فقط داخل الخيارات. بهذا لا يفضح وصف مثل
-// «دينار أردني» إجابة سؤال الأردن، بينما تظل التسمية الرسمية الكاملة في التصحيح والشرح.
+// «دينار أردني» إجابة سؤال الأردن، بينما تظل التسمية الرسمية الكاملة في التصحيح بعد الإجابة.
 function currencyOptionLabel(value = '') {
   const firstWord = trimFact(value).split(/\s+/u)[0] || ''
   return firstWord.replace(/^ال/u, '') || trimFact(value)
@@ -1189,7 +904,6 @@ function App() {
           <QuizView
             session={session}
             timerPaused={isTimerPaused}
-            showExtraInfo={settings.showExtraInfo}
             answerQuestion={answerQuestion}
             nextQuestion={nextQuestion}
             abandonSession={abandonSession}
@@ -1480,7 +1194,6 @@ function SettingsView({ settings, updateSettings, seenQuestionCount, unseenQuest
             choices={AUTO_ADVANCE_OPTIONS.map((seconds) => ({ value: String(seconds), label: `${formatNumber(seconds)} ث` }))}
             onChange={(seconds) => updateSettings({ autoAdvanceSeconds: Number(seconds) })}
           />
-          <SettingsToggle label="إظهار معلومة إضافية" description="أظهر رابطًا أو طريقة تذكّر بعد كل إجابة." enabled={settings.showExtraInfo} onToggle={() => updateSettings({ showExtraInfo: !settings.showExtraInfo })} />
         </section>
 
         <section className="settings-card settings-card--history reveal">
@@ -1541,7 +1254,7 @@ function StatCard({ icon, value, label, tone }) {
   return <div className={`stat-card stat-card--${tone}`}><span>{icon}</span><div><b>{value}</b><small>{label}</small></div></div>
 }
 
-function QuizView({ session, timerPaused, showExtraInfo, answerQuestion, nextQuestion, abandonSession }) {
+function QuizView({ session, timerPaused, answerQuestion, nextQuestion, abandonSession }) {
   const current = session.questions[session.currentIndex]
   const currentCategory = categoryMap[current.category] || categoryMap.science
   const selected = session.selectedAnswer
@@ -1589,7 +1302,6 @@ function QuizView({ session, timerPaused, showExtraInfo, answerQuestion, nextQue
             })}
           </div>
           {selected && <div className={`answer-feedback ${isCorrect ? 'is-correct' : 'is-wrong'}`}><span>{isCorrect ? '🎉' : '💡'}</span><div><b>{isCorrect ? 'إجابة رائعة!' : 'ليست الإجابة الصحيحة هذه المرة.'}</b><p>{isCorrect ? <>أحسنت، أضفت نقاطًا جديدة إلى رصيدك.{current.answerKind === 'currency' && <> الاسم الرسمي للعملة: <strong>{current.answer}</strong>.</>}</> : <>الإجابة الصحيحة: <strong>{current.answer}</strong></>}</p></div></div>}
-          {selected && showExtraInfo && <aside className="learning-note"><span>{current.additionalInfo?.icon || '💡'}</span><div><small>معلومة إضافية</small><b>{current.additionalInfo?.title || 'تثبيت المعلومة'}</b><p>{current.additionalInfo?.text}</p></div></aside>}
           {selected && session.autoAdvanceEnabled && <div className="auto-advance" role="status" aria-live="polite"><div className="auto-advance__row"><span>سيتم الانتقال تلقائيًا إلى السؤال التالي</span><b>{timerPaused ? 'متوقف مؤقتًا' : `خلال ${formatNumber(secondsToNext)} ثوانٍ`}</b></div><div className="auto-advance__bar"><i style={{ width: `${autoAdvancePercent}%` }} /></div></div>}
           {selected && !session.autoAdvanceEnabled && <div className="manual-advance-note">الانتقال اليدوي مفعّل — اختر «السؤال التالي» عندما تكون جاهزًا.</div>}
         </section>
