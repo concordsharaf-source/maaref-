@@ -4,8 +4,9 @@ import { categories, categoryMap } from './data/categories'
 
 const LETTERS = ['أ', 'ب', 'ج', 'د']
 const STORAGE_KEY = 'maaref-progress-v1'
-const PWA_INSTALL_DISMISSED_KEY = 'maaref-pwa-install-dismissed-v1'
-const AUTO_ADVANCE_MS = 3_000
+const SETTINGS_KEY = 'maaref-settings-v1'
+const AUTO_ADVANCE_OPTIONS = [2, 3, 5, 8]
+const DIFFICULTY_LABELS = { 1: 'سهل', 2: 'مألوف', 3: 'متوسط', 4: 'متقدم', 5: 'تحدٍ' }
 
 const emptyStats = {
   answered: 0,
@@ -16,14 +17,48 @@ const emptyStats = {
   dailyBest: 0,
   dailyDate: '',
   categoryStats: {},
+  seenQuestionIds: [],
+}
+
+const defaultSettings = {
+  theme: 'light',
+  autoAdvance: true,
+  autoAdvanceSeconds: 3,
+  showExtraInfo: true,
+  questionTextSize: 'comfortable',
+  reduceMotion: false,
 }
 
 function readStats() {
   try {
     const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}')
-    return { ...emptyStats, ...saved, categoryStats: saved.categoryStats || {} }
+    const seenQuestionIds = Array.isArray(saved.seenQuestionIds)
+      ? [...new Set(saved.seenQuestionIds.filter((id) => typeof id === 'string'))]
+      : []
+    return { ...emptyStats, ...saved, categoryStats: saved.categoryStats || {}, seenQuestionIds }
   } catch {
     return emptyStats
+  }
+}
+
+function readSettings() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(SETTINGS_KEY) || '{}')
+    const autoAdvanceSeconds = AUTO_ADVANCE_OPTIONS.includes(Number(saved.autoAdvanceSeconds))
+      ? Number(saved.autoAdvanceSeconds)
+      : defaultSettings.autoAdvanceSeconds
+    return {
+      ...defaultSettings,
+      ...saved,
+      theme: saved.theme === 'dark' ? 'dark' : 'light',
+      autoAdvance: typeof saved.autoAdvance === 'boolean' ? saved.autoAdvance : defaultSettings.autoAdvance,
+      autoAdvanceSeconds,
+      showExtraInfo: typeof saved.showExtraInfo === 'boolean' ? saved.showExtraInfo : defaultSettings.showExtraInfo,
+      questionTextSize: saved.questionTextSize === 'large' ? 'large' : 'comfortable',
+      reduceMotion: typeof saved.reduceMotion === 'boolean' ? saved.reduceMotion : defaultSettings.reduceMotion,
+    }
+  } catch {
+    return defaultSettings
   }
 }
 
@@ -273,9 +308,231 @@ const fallbackOptions = {
   'religion-definition': ['الجهة التي يتوجه إليها المسلم في الصلاة', 'الإقرار بوحدانية الله ورسالة محمد'],
 }
 
+function clamp(value, minimum, maximum) {
+  return Math.max(minimum, Math.min(maximum, value))
+}
+
+function trimFact(value = '') {
+  return String(value).replace(/[.؟?]+$/u, '').trim()
+}
+
+function factKey(value = '') {
+  return normalizeQuestion(trimFact(value))
+}
+
+function getFactRecord(map, label, labelName) {
+  const key = factKey(label)
+  if (!key) return null
+  if (!map.has(key)) map.set(key, { [labelName]: trimFact(label) })
+  return map.get(key)
+}
+
+function estimateQuestionDifficulty(question) {
+  const text = normalizeQuestion(question.question)
+  const answer = trimFact(question.answer)
+  let difficulty = 2
+
+  if (text.includes('صح أم خطأ') || text.includes('صح ام خطا')) difficulty = 1
+  if (question.category === 'math') {
+    difficulty = /^كم يساوي \d{1,2}\s*[+−-]/u.test(text) ? 1 : 2
+    if (/[×÷%]/u.test(question.question) || /(المتوسط|الجذر|اس |منطق|احتمال)/u.test(text)) difficulty += 1
+    if ((question.question.match(/\d+/g) || []).some((value) => Number(value) > 99)) difficulty += 1
+  }
+
+  if (question.category === 'arts' || question.category === 'culture') difficulty += 1
+  if (/(ما المقصود|ما المصطلح|في اي عام|العدد الذري|الرمز الكيميائي|مؤلف|مخرج|اذكر كتاب|اذكر فيلم|ما البيئة|كم ركعة)/u.test(text)) difficulty += 1
+  if (question.question.length > 90) difficulty += 1
+  if (question.question.length > 150 || answer.length > 30) difficulty += 1
+
+  return clamp(difficulty, 1, 5)
+}
+
+function buildKnowledgeLinks(questions) {
+  const countries = new Map()
+  const cities = new Map()
+  const elements = new Map()
+  const booksByTitle = new Map()
+  const booksByAuthor = new Map()
+  const filmsByTitle = new Map()
+  const filmsByDirector = new Map()
+
+  const addBook = (title, author) => {
+    const record = { title: trimFact(title), author: trimFact(author) }
+    const titleKey = factKey(title)
+    const authorKey = factKey(author)
+    if (titleKey && !booksByTitle.has(titleKey)) booksByTitle.set(titleKey, record)
+    if (authorKey && !booksByAuthor.has(authorKey)) booksByAuthor.set(authorKey, record)
+  }
+
+  const addFilm = (title, director) => {
+    const record = { title: trimFact(title), director: trimFact(director) }
+    const titleKey = factKey(title)
+    const directorKey = factKey(director)
+    if (titleKey && !filmsByTitle.has(titleKey)) filmsByTitle.set(titleKey, record)
+    if (directorKey && !filmsByDirector.has(directorKey)) filmsByDirector.set(directorKey, record)
+  }
+
+  questions.forEach((item) => {
+    const question = String(item.question || '').trim()
+    const answer = trimFact(item.answer)
+    if (!question || !answer) return
+
+    if (item.category === 'geography') {
+      let match = question.match(/^ما عاصمة (.+?)[؟?]$/u)
+      if (match) getFactRecord(countries, match[1], 'country').capital = answer
+
+      match = question.match(/^(.+?) عاصمة لأي دولة[؟?]$/u)
+      if (match) getFactRecord(countries, answer, 'country').capital = trimFact(match[1])
+
+      match = question.match(/^اذكر عملة رسمية مستخدمة في (.+?)[.؟?]$/u)
+      if (match) getFactRecord(countries, match[1], 'country').currency = answer
+
+      match = question.match(/^في أي دولة تقع مدينة (.+?)[؟?]$/u)
+      if (match) getFactRecord(cities, match[1], 'city').country = answer
+
+      if (sameAnswer(answer, 'صحيح.')) {
+        match = question.match(/^صح أم خطأ:\s*عاصمة (.+?) هي (.+?)[.؟?]$/u)
+        if (match) getFactRecord(countries, match[1], 'country').capital = trimFact(match[2])
+
+        match = question.match(/^صح أم خطأ:\s*تُستخدم (.+?) عملةً رسمية في (.+?)[.؟?]$/u)
+        if (match) getFactRecord(countries, match[2], 'country').currency = trimFact(match[1])
+
+        match = question.match(/^صح أم خطأ:\s*تقع مدينة (.+?) في (.+?)[.؟?]$/u)
+        if (match) getFactRecord(cities, match[1], 'city').country = trimFact(match[2])
+      }
+    }
+
+    if (item.category === 'science') {
+      let match = question.match(/^ما الرمز الكيميائي لعنصر (.+?)[؟?]$/u)
+      if (match) getFactRecord(elements, match[1], 'element').symbol = answer
+
+      match = question.match(/^ما العدد الذري لعنصر (.+?)[؟?]$/u)
+      if (match) getFactRecord(elements, match[1], 'element').atomicNumber = answer
+
+      match = question.match(/^ما العنصر الذي عدده الذري (.+?)[؟?]$/u)
+      if (match) getFactRecord(elements, answer, 'element').atomicNumber = trimFact(match[1])
+
+      match = question.match(/^ما اسم العنصر الذي رمزه الكيميائي (.+?)[؟?]$/u)
+      if (match) getFactRecord(elements, answer, 'element').symbol = trimFact(match[1])
+    }
+
+    if (item.category === 'arts') {
+      let match = question.match(/^من مؤلف كتاب «(.+)»[؟?]$/u)
+      if (match) addBook(match[1], answer)
+      match = question.match(/^اذكر كتابًا من تأليف (.+?)[.؟?]$/u)
+      if (match) addBook(answer, match[1])
+    }
+
+    if (item.category === 'culture') {
+      let match = question.match(/^من مخرج فيلم «(.+)»[؟?]$/u)
+      if (match) addFilm(match[1], answer)
+      match = question.match(/^اذكر فيلمًا من إخراج (.+?)[.؟?]$/u)
+      if (match) addFilm(answer, match[1])
+    }
+  })
+
+  return { countries, cities, elements, booksByTitle, booksByAuthor, filmsByTitle, filmsByDirector }
+}
+
+const knowledgeLinks = buildKnowledgeLinks(questionBank)
+
+function geographyCountryFor(question) {
+  const text = String(question.question || '').trim()
+  let match = text.match(/^ما عاصمة (.+?)[؟?]$/u)
+  if (match) return trimFact(match[1])
+  match = text.match(/^اذكر عملة رسمية مستخدمة في (.+?)[.؟?]$/u)
+  if (match) return trimFact(match[1])
+  match = text.match(/^(.+?) عاصمة لأي دولة[؟?]$/u)
+  if (match) return trimFact(question.answer)
+  match = text.match(/^في أي دولة تقع مدينة (.+?)[؟?]$/u)
+  if (match) return knowledgeLinks.cities.get(factKey(match[1]))?.country || trimFact(question.answer)
+  match = text.match(/عاصمة (.+?) هي /u)
+  if (match) return trimFact(match[1])
+  match = text.match(/عملةً رسمية في (.+?)[.؟?]$/u)
+  if (match) return trimFact(match[1])
+  match = text.match(/تقع مدينة .+? في (.+?)[.؟?]$/u)
+  if (match) return trimFact(match[1])
+  return ''
+}
+
+function scienceElementFor(question) {
+  const text = String(question.question || '').trim()
+  let match = text.match(/^ما الرمز الكيميائي لعنصر (.+?)[؟?]$/u)
+  if (match) return trimFact(match[1])
+  match = text.match(/^ما العدد الذري لعنصر (.+?)[؟?]$/u)
+  if (match) return trimFact(match[1])
+  if (/^ما العنصر الذي عدده الذري /u.test(text) || /^ما اسم العنصر الذي رمزه الكيميائي /u.test(text)) return trimFact(question.answer)
+  return ''
+}
+
+function buildAdditionalInfo(question) {
+  const answer = trimFact(question.answer)
+  const sourceQuestion = String(question.question || '').trim()
+  const categoryTitle = categoryMap[question.category]?.title || 'معارف'
+
+  if (question.category === 'geography') {
+    const country = geographyCountryFor(question)
+    const fact = knowledgeLinks.countries.get(factKey(country))
+    if (fact) {
+      const related = [
+        fact.capital && !sameAnswer(fact.capital, answer) ? `العاصمة: ${fact.capital}` : '',
+        fact.currency && !sameAnswer(fact.currency, answer) ? `العملة: ${fact.currency}` : '',
+      ].filter(Boolean)
+      if (related.length) return { icon: '🗺️', title: `صلة جغرافية: ${fact.country}`, text: related.join(' • ') }
+    }
+    return { icon: '🗺️', title: 'اربطها بالخريطة', text: `ثبّت «${answer}» بربط الاسم بموقعه على الخريطة؛ فالسياق المكاني يساعد على التذكر.` }
+  }
+
+  if (question.category === 'science') {
+    const element = scienceElementFor(question)
+    const fact = knowledgeLinks.elements.get(factKey(element))
+    if (fact) {
+      const related = [
+        fact.element && !sameAnswer(fact.element, answer) ? `العنصر: ${fact.element}` : '',
+        fact.symbol && !sameAnswer(fact.symbol, answer) ? `الرمز: ${fact.symbol}` : '',
+        fact.atomicNumber && !sameAnswer(fact.atomicNumber, answer) ? `العدد الذري: ${fact.atomicNumber}` : '',
+      ].filter(Boolean)
+      if (related.length) return { icon: '⚛️', title: 'بطاقة العنصر', text: related.join(' • ') }
+    }
+    return { icon: '🔬', title: 'مفتاح علمي', text: 'في العلوم، اربط المصطلح بوظيفته أو خاصيته الأساسية بدل حفظ الاسم وحده.' }
+  }
+
+  if (question.category === 'arts') {
+    const titleMatch = sourceQuestion.match(/كتاب «(.+?)»/u)
+    const book = titleMatch ? knowledgeLinks.booksByTitle.get(factKey(titleMatch[1])) : knowledgeLinks.booksByAuthor.get(factKey(answer))
+    if (book) return { icon: '📚', title: 'صلة أدبية', text: `الكتاب: «${book.title}» • المؤلف: ${book.author}` }
+    return { icon: '📚', title: 'تثبيت أدبي', text: 'اربط عنوان العمل بصاحبه؛ فالعنوان والمؤلف يُحفظان كزوج معرفي واحد.' }
+  }
+
+  if (question.category === 'culture') {
+    const titleMatch = sourceQuestion.match(/فيلم «(.+?)»/u)
+    const film = titleMatch ? knowledgeLinks.filmsByTitle.get(factKey(titleMatch[1])) : knowledgeLinks.filmsByDirector.get(factKey(answer))
+    if (film) return { icon: '🎬', title: 'صلة سينمائية', text: `الفيلم: «${film.title}» • المخرج: ${film.director}` }
+    return { icon: '🎬', title: 'تثبيت سينمائي', text: 'المخرج يقود الرؤية الفنية للعمل، لذا اربط اسم الفيلم باسم مخرجه.' }
+  }
+
+  if (question.category === 'math') {
+    if (sourceQuestion.includes('%')) return { icon: '➗', title: 'طريقة سريعة', text: 'لحساب النسبة المئوية، حوّل النسبة إلى كسر من 100 ثم اضربها في العدد.' }
+    if (/[×]/u.test(sourceQuestion)) return { icon: '✖️', title: 'طريقة سريعة', text: 'الضرب هو جمع متكرر؛ قسّم الأعداد إلى عشرات وآحاد لتسهيل الحساب الذهني.' }
+    if (/[÷]/u.test(sourceQuestion)) return { icon: '➗', title: 'طريقة سريعة', text: 'في القسمة، تحقّق من الناتج بضربه في المقسوم عليه.' }
+    return { icon: '🧮', title: 'تثبيت الحل', text: 'اكتب العملية على خطوات قصيرة ثم راجع الناتج بالعملية العكسية عند الإمكان.' }
+  }
+
+  if (question.category === 'religion') return { icon: '🕌', title: 'تثبيت المعلومة', text: `اربط «${answer}» بسياق العبادة أو الحدث المذكور في السؤال لتبقى المعلومة مترابطة.` }
+  if (question.category === 'language') return { icon: '✍️', title: 'تطبيق لغوي', text: 'استخدم المصطلح في جملة من إنشائك؛ التطبيق القصير أسرع طريقة لتثبيت المفاهيم اللغوية.' }
+  if (question.category === 'nature') return { icon: '🌿', title: 'رابط طبيعي', text: 'تأمل الوظيفة أو البيئة أو الصفة المرتبطة بالمفهوم؛ العلاقات تساعد على فهم الطبيعة لا حفظها فقط.' }
+  if (question.category === 'history') return { icon: '🏛️', title: 'رابط تاريخي', text: 'ضع الحدث أو المصطلح داخل سياقه الزمني؛ معرفة ما قبله وما بعده تجعل التاريخ أسهل تذكرًا.' }
+  if (question.category === 'technology') return { icon: '💻', title: 'تطبيق تقني', text: 'جرّب ربط المصطلح بمثال تستخدمه يوميًا؛ المثال العملي يوضح وظيفته بسرعة.' }
+  if (question.category === 'sports') return { icon: '🏅', title: 'معلومة رياضية', text: 'اربط المصطلح بقانون اللعبة أو هدفها الأساسي لتفهمه وتتذكره بسهولة.' }
+
+  return { icon: '💡', title: `معلومة من ${categoryTitle}`, text: 'أعد صياغة الإجابة بطريقتك؛ الشرح بكلماتك يحوّل المعلومة إلى معرفة ثابتة.' }
+}
+
 const enrichedQuestionBank = questionBank.map((question) => ({
   ...question,
   answerKind: inferAnswerKind(question),
+  difficulty: estimateQuestionDifficulty(question),
+  additionalInfo: buildAdditionalInfo(question),
 }))
 
 const answerPools = enrichedQuestionBank.reduce((pools, question) => {
@@ -303,6 +560,26 @@ function uniqueRelatedAnswers(question) {
   })
 }
 
+function selectProgressiveQuestions(pool, count, random) {
+  const total = Math.min(count, pool.length)
+  const buckets = Array.from({ length: 5 }, () => [])
+  shuffle(pool, random).forEach((question) => buckets[question.difficulty - 1].push(question))
+
+  const selected = []
+  for (let index = 0; index < total; index += 1) {
+    const target = Math.min(5, Math.floor((index * 5) / total) + 1)
+    const levels = [target]
+    for (let distance = 1; distance < 5; distance += 1) {
+      if (target + distance <= 5) levels.push(target + distance)
+      if (target - distance >= 1) levels.push(target - distance)
+    }
+    const bucket = levels.map((level) => buckets[level - 1]).find((items) => items.length)
+    if (bucket) selected.push(bucket.pop())
+  }
+
+  return selected.sort((first, second) => first.difficulty - second.difficulty)
+}
+
 function createRound(question, random) {
   const expected = String(question.answer).trim()
   const wrongOptions = shuffle(uniqueRelatedAnswers(question), random).slice(0, 3)
@@ -313,12 +590,15 @@ function createRound(question, random) {
   }
 }
 
-function createQuestions({ category = 'all', count = 10, daily = false }) {
+function createQuestions({ category = 'all', count = 10, daily = false, excludedQuestionIds = [] }) {
+  const excluded = excludedQuestionIds instanceof Set ? excludedQuestionIds : new Set(excludedQuestionIds)
   const matching = enrichedQuestionBank.filter((question) => category === 'all' || question.category === category)
-  const pool = matching.filter(isQuizReady).filter((question) => uniqueRelatedAnswers(question).length > 0)
+  const pool = matching
+    .filter((question) => !excluded.has(question.id))
+    .filter(isQuizReady)
+    .filter((question) => uniqueRelatedAnswers(question).length > 0)
   const random = daily ? seededRandom(`${todayKey()}-${category}-${count}`) : Math.random
-  const selected = shuffle(pool, random).slice(0, Math.min(count, pool.length))
-  return selected.map((question) => createRound(question, random))
+  return selectProgressiveQuestions(pool, count, random).map((question) => createRound(question, random))
 }
 
 function Icon({ children, className = '' }) {
@@ -347,18 +627,11 @@ function isStandaloneApp() {
   return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true
 }
 
-function InstallAppBanner({ onToast }) {
+function InstallAppBanner({ onToast, onDismiss }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
   const [isAppleMobile] = useState(isAppleMobileDevice)
   const [isInstalled, setIsInstalled] = useState(isStandaloneApp)
-  const [isDismissed, setIsDismissed] = useState(() => {
-    try {
-      return window.localStorage.getItem(PWA_INSTALL_DISMISSED_KEY) === 'true'
-    } catch {
-      return false
-    }
-  })
-  const [showIosInstructions, setShowIosInstructions] = useState(false)
+  const [showInstructions, setShowInstructions] = useState(false)
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (event) => {
@@ -379,21 +652,11 @@ function InstallAppBanner({ onToast }) {
     }
   }, [onToast])
 
-  const dismiss = () => {
-    setIsDismissed(true)
-    try {
-      window.localStorage.setItem(PWA_INSTALL_DISMISSED_KEY, 'true')
-    } catch {
-      // The install card can still be dismissed when storage is unavailable.
-    }
-  }
-
   const requestInstall = async () => {
-    if (isAppleMobile) {
-      setShowIosInstructions((current) => !current)
+    if (isAppleMobile || !deferredPrompt) {
+      setShowInstructions((current) => !current)
       return
     }
-    if (!deferredPrompt) return
 
     try {
       await deferredPrompt.prompt()
@@ -405,19 +668,24 @@ function InstallAppBanner({ onToast }) {
     }
   }
 
-  if (isInstalled || isDismissed || (!deferredPrompt && !isAppleMobile)) return null
+  if (isInstalled) return null
+
+  const manualInstall = isAppleMobile || !deferredPrompt
+  const instructions = isAppleMobile
+    ? 'على آيفون أو آيباد: افتح زر المشاركة، ثم اختر «إضافة إلى الشاشة الرئيسية»، وبعدها «إضافة».'
+    : 'في Chrome أو Edge: افتح قائمة المتصفح ⋮ ثم اختر «تثبيت معارف» أو «إضافة إلى الشاشة الرئيسية».'
 
   return (
     <aside className="install-banner" aria-label="تثبيت تطبيق معارف">
       <span className="install-banner__icon" aria-hidden="true">📲</span>
       <div className="install-banner__copy">
         <strong>ثبّت معارف كتطبيق</strong>
-        <p>{isAppleMobile ? 'أضِفه إلى الشاشة الرئيسية لفتحه كتطبيق مستقل.' : 'افتحه سريعًا كتطبيق مستقل واستمر في التعلّم حتى عند انقطاع الإنترنت.'}</p>
-        {isAppleMobile && showIosInstructions && <p className="install-banner__instructions"><b>على آيفون أو آيباد:</b> افتح زر المشاركة، ثم اختر «إضافة إلى الشاشة الرئيسية»، وبعدها «إضافة».</p>}
+        <p>{isAppleMobile ? 'أضِفه إلى الشاشة الرئيسية لفتحه كتطبيق مستقل.' : deferredPrompt ? 'افتحه سريعًا كتطبيق مستقل واستمر في التعلّم حتى عند انقطاع الإنترنت.' : 'معارف جاهز للتثبيت؛ اضغط لمعرفة الخطوة المناسبة لمتصفحك.'}</p>
+        {showInstructions && <p className="install-banner__instructions"><b>طريقة التثبيت:</b> {instructions}</p>}
       </div>
       <div className="install-banner__actions">
-        <button className="button button--primary" type="button" onClick={requestInstall}>{isAppleMobile ? 'طريقة الإضافة' : 'تثبيت التطبيق'} <span>↓</span></button>
-        <button className="install-banner__close" type="button" onClick={dismiss} aria-label="إغلاق اقتراح تثبيت معارف">×</button>
+        <button className="button button--primary" type="button" onClick={requestInstall}>{manualInstall ? 'طريقة التثبيت' : 'تثبيت التطبيق'} <span>↓</span></button>
+        <button className="install-banner__close" type="button" onClick={onDismiss} aria-label="إغلاق اقتراح تثبيت معارف">×</button>
       </div>
     </aside>
   )
@@ -430,6 +698,8 @@ function App() {
   const [result, setResult] = useState(null)
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [toast, setToast] = useState('')
+  const [settings, setSettings] = useState(readSettings)
+  const [installBannerDismissed, setInstallBannerDismissed] = useState(false)
 
   const categoryCounts = useMemo(() => {
     const counts = Object.fromEntries(categories.map((category) => [category.id, 0]))
@@ -439,6 +709,11 @@ function App() {
     return counts
   }, [])
 
+  const unseenQuestionCount = useMemo(() => {
+    const seen = new Set(stats.seenQuestionIds)
+    return questionBank.reduce((total, question) => total + (seen.has(question.id) ? 0 : 1), 0)
+  }, [stats.seenQuestionIds])
+
   const level = Math.floor(stats.totalPoints / 900) + 1
   const progress = ((stats.totalPoints % 900) / 900) * 100
   const accuracy = stats.answered ? Math.round((stats.correct / stats.answered) * 100) : 0
@@ -446,6 +721,12 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stats))
   }, [stats])
+
+  useEffect(() => {
+    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+    document.documentElement.style.colorScheme = settings.theme === 'dark' ? 'dark' : 'light'
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', settings.theme === 'dark' ? '#17123A' : '#faf9ff')
+  }, [settings])
 
   useEffect(() => {
     if (!toast) return undefined
@@ -459,11 +740,22 @@ function App() {
   }
 
   const startGame = ({ mode = 'practice', category = 'all', count = 10, duration = 0, daily = false } = {}) => {
-    const rounds = createQuestions({ category, count, daily })
+    const seenQuestionIds = new Set(stats.seenQuestionIds)
+    const rounds = createQuestions({ category, count, daily, excludedQuestionIds: seenQuestionIds })
     if (!rounds.length) {
-      setToast('لا توجد أسئلة كافية في هذه الفئة حاليًا.')
+      const place = category === 'all' ? 'بنك معارف' : categoryMap[category]?.title || 'هذه الفئة'
+      setToast(`أكملت الأسئلة الجديدة المتاحة في ${place}. يمكنك إعادة إتاحة الأسئلة من الإعدادات.`)
       return
     }
+
+    // تُحجز أسئلة الجولة فورًا كي لا تظهر في جولة لاحقة حتى إن خرج اللاعب قبل إكمالها.
+    setStats((previous) => {
+      const reserved = new Set(previous.seenQuestionIds)
+      rounds.forEach((question) => reserved.add(question.id))
+      return { ...previous, seenQuestionIds: [...reserved] }
+    })
+
+    const autoAdvanceMs = settings.autoAdvance ? settings.autoAdvanceSeconds * 1000 : 0
     setResult(null)
     setSession({
       mode,
@@ -478,6 +770,8 @@ function App() {
       correctCount: 0,
       answeredCount: 0,
       selectedAnswer: '',
+      autoAdvanceEnabled: settings.autoAdvance,
+      autoAdvanceMs,
       autoAdvanceUntil: 0,
       autoAdvanceRemaining: 0,
       questions: rounds,
@@ -528,13 +822,14 @@ function App() {
     const correct = sameAnswer(answer, current.answer)
     const timeBonus = session.duration ? Math.min(50, Math.max(0, Math.floor(session.secondsLeft / 6))) : 0
     const earned = correct ? 100 + timeBonus : 0
-    const autoAdvanceUntil = Date.now() + AUTO_ADVANCE_MS
+    const autoAdvanceMs = session.autoAdvanceEnabled ? session.autoAdvanceMs : 0
+    const autoAdvanceUntil = autoAdvanceMs ? Date.now() + autoAdvanceMs : 0
 
     setSession((previous) => previous ? {
       ...previous,
       selectedAnswer: answer,
       autoAdvanceUntil,
-      autoAdvanceRemaining: AUTO_ADVANCE_MS,
+      autoAdvanceRemaining: autoAdvanceMs,
       score: previous.score + earned,
       correctCount: previous.correctCount + (correct ? 1 : 0),
       answeredCount: previous.answeredCount + 1,
@@ -573,7 +868,7 @@ function App() {
     } : previous)
   }
 
-  // بعد الإجابة يبدأ عداد مرئي من خمس ثوان؛ يبقى زر «التالي» متاحًا للانتقال الفوري.
+  // بعد الإجابة يبدأ العداد بالمدة التي اختارها اللاعب؛ يبقى زر «التالي» متاحًا للانتقال الفوري.
   useEffect(() => {
     if (!session?.selectedAnswer || !session.autoAdvanceUntil) return undefined
 
@@ -609,15 +904,30 @@ function App() {
     }
   }
 
+  const resetQuestionHistory = () => {
+    if (window.confirm('سيتم إعادة إتاحة جميع الأسئلة في الجولات القادمة، مع الاحتفاظ بنقاطك ونتائجك. هل تريد المتابعة؟')) {
+      setStats((previous) => ({ ...previous, seenQuestionIds: [] }))
+      setToast('تمت إعادة إتاحة جميع الأسئلة للجولات القادمة.')
+    }
+  }
+
+  const updateSettings = (changes) => setSettings((previous) => ({ ...previous, ...changes }))
+
+  const openInstallOptions = () => {
+    setInstallBannerDismissed(false)
+    navigate('home')
+  }
+
   const navItems = [
     { id: 'home', label: 'الرئيسية', icon: '⌂' },
     { id: 'categories', label: 'الفئات', icon: '◫' },
     { id: 'competitions', label: 'المسابقات', icon: '⚡' },
     { id: 'profile', label: 'تقدمي', icon: '◌' },
+    { id: 'settings', label: 'الإعدادات', icon: '⚙' },
   ]
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell theme--${settings.theme} ${settings.questionTextSize === 'large' ? 'text-scale--large' : ''} ${settings.reduceMotion ? 'reduce-motion' : ''}`}>
       <div className="ambient ambient--one" />
       <div className="ambient ambient--two" />
 
@@ -692,9 +1002,21 @@ function App() {
             startGame={startGame}
           />
         )}
+        {view === 'settings' && (
+          <SettingsView
+            settings={settings}
+            updateSettings={updateSettings}
+            seenQuestionCount={stats.seenQuestionIds.length}
+            unseenQuestionCount={unseenQuestionCount}
+            resetQuestionHistory={resetQuestionHistory}
+            resetProgress={resetProgress}
+            openInstallOptions={openInstallOptions}
+          />
+        )}
         {view === 'quiz' && session && (
           <QuizView
             session={session}
+            showExtraInfo={settings.showExtraInfo}
             answerQuestion={answerQuestion}
             nextQuestion={nextQuestion}
             abandonSession={abandonSession}
@@ -721,7 +1043,7 @@ function App() {
         </nav>
       )}
 
-      {view === 'home' && <InstallAppBanner onToast={setToast} />}
+      {view === 'home' && !installBannerDismissed && <InstallAppBanner onToast={setToast} onDismiss={() => setInstallBannerDismissed(true)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   )
@@ -884,7 +1206,7 @@ function CompetitionsView({ stats, startGame, navigate }) {
       <div className="challenge-grid">
         <ChallengeCard emoji="⚡" label="تحدي البرق" title="10 أسئلة في 90 ثانية" description="اختبار سريع من فئات متنوعة." meta="+ نقاط سرعة" color="violet" onStart={() => startGame({ mode: 'sprint', count: 10, duration: 90 })} />
         <ChallengeCard emoji="🎯" label="اختبار المعرفة" title="15 سؤالًا متنوعًا" description="اختبر رصيدك المعرفي في جلسة شاملة." meta="6 دقائق" color="mint" onStart={() => startGame({ mode: 'test', count: 15, duration: 360 })} />
-        <ChallengeCard emoji="☀️" label={dailyDone ? 'أنجزت التحدي' : 'تحدي اليوم'} title={dailyDone ? `أفضل نتيجتك: ${formatNumber(stats.dailyBest)}` : '10 أسئلة جديدة كل يوم'} description="نفس الأسئلة خلال اليوم لتقارن نتائجك." meta="3 دقائق" color="sun" onStart={() => startGame({ mode: 'daily', count: 10, duration: 180, daily: true })} />
+        <ChallengeCard emoji="☀️" label={dailyDone ? 'أنجزت التحدي' : 'تحدي اليوم'} title={dailyDone ? `أفضل نتيجتك: ${formatNumber(stats.dailyBest)}` : '10 أسئلة جديدة كل يوم'} description="أسئلة جديدة تضيفها إلى رصيدك المعرفي كل يوم." meta="3 دقائق" color="sun" onStart={() => startGame({ mode: 'daily', count: 10, duration: 180, daily: true })} />
       </div>
 
       <section className="scoreboard section">
@@ -907,6 +1229,88 @@ function CompetitionsView({ stats, startGame, navigate }) {
 
 function ChallengeCard({ emoji, label, title, description, meta, color, onStart }) {
   return <article className={`challenge-card challenge-card--${color}`}><span className="challenge-card__emoji">{emoji}</span><small>{label}</small><h3>{title}</h3><p>{description}</p><div><span>{meta}</span><button type="button" onClick={onStart}>ابدأ ←</button></div></article>
+}
+
+function SettingsToggle({ label, description, enabled, onToggle }) {
+  return (
+    <div className="setting-toggle-row">
+      <div><b>{label}</b><p>{description}</p></div>
+      <button type="button" className={`setting-switch ${enabled ? 'is-on' : ''}`} role="switch" aria-label={label} aria-checked={enabled} onClick={onToggle}>
+        <span>{enabled ? 'مفعّل' : 'متوقف'}</span><i aria-hidden="true" />
+      </button>
+    </div>
+  )
+}
+
+function SettingsSegment({ label, description, value, choices, onChange }) {
+  return (
+    <div className="setting-segment-row">
+      <div><b>{label}</b><p>{description}</p></div>
+      <div className="setting-segment" role="group" aria-label={label}>
+        {choices.map((choice) => <button key={choice.value} type="button" className={value === choice.value ? 'is-selected' : ''} aria-pressed={value === choice.value} onClick={() => onChange(choice.value)}>{choice.label}</button>)}
+      </div>
+    </div>
+  )
+}
+
+function SettingsView({ settings, updateSettings, seenQuestionCount, unseenQuestionCount, resetQuestionHistory, resetProgress, openInstallOptions }) {
+  return (
+    <div className="page-width settings-page">
+      <section className="settings-hero reveal">
+        <span className="eyebrow"><span>⚙️</span> إعدادات التجربة</span>
+        <h1>تجربتك، <em>بطريقتك.</em></h1>
+        <p>اضبط الانتقال بين الأسئلة، المظهر، وحجم القراءة. تُحفظ خياراتك على هذا الجهاز تلقائيًا.</p>
+      </section>
+
+      <div className="settings-grid">
+        <section className="settings-card reveal">
+          <div className="settings-card__head"><span>🎨</span><div><small>الشكل والقراءة</small><h2>مظهر يناسبك</h2></div></div>
+          <SettingsSegment
+            label="نمط المظهر"
+            description="اختر الواجهة الفاتحة أو الداكنة."
+            value={settings.theme}
+            choices={[{ value: 'light', label: '☀️ فاتح' }, { value: 'dark', label: '🌙 داكن' }]}
+            onChange={(theme) => updateSettings({ theme })}
+          />
+          <SettingsSegment
+            label="حجم نص الأسئلة"
+            description="اجعله أكبر لقراءة أكثر راحة."
+            value={settings.questionTextSize}
+            choices={[{ value: 'comfortable', label: 'مريح' }, { value: 'large', label: 'كبير' }]}
+            onChange={(questionTextSize) => updateSettings({ questionTextSize })}
+          />
+          <SettingsToggle label="تقليل المؤثرات الحركية" description="أوقف الحركات والانتقالات غير الضرورية." enabled={settings.reduceMotion} onToggle={() => updateSettings({ reduceMotion: !settings.reduceMotion })} />
+        </section>
+
+        <section className="settings-card settings-card--quiz reveal reveal--late">
+          <div className="settings-card__head"><span>⏱️</span><div><small>الجولات والإجابات</small><h2>تحكم في الوتيرة</h2></div></div>
+          <SettingsToggle label="الانتقال التلقائي" description="انتقل بعد الإجابة دون الضغط على زر التالي." enabled={settings.autoAdvance} onToggle={() => updateSettings({ autoAdvance: !settings.autoAdvance })} />
+          <SettingsSegment
+            label="مدة الانتقال"
+            description={settings.autoAdvance ? 'تبدأ بعد اختيار الإجابة في الجولة التالية.' : 'فعّل الانتقال التلقائي أولًا لاستخدام المدة.'}
+            value={String(settings.autoAdvanceSeconds)}
+            choices={AUTO_ADVANCE_OPTIONS.map((seconds) => ({ value: String(seconds), label: `${formatNumber(seconds)} ث` }))}
+            onChange={(seconds) => updateSettings({ autoAdvanceSeconds: Number(seconds) })}
+          />
+          <SettingsToggle label="إظهار معلومة إضافية" description="أظهر رابطًا أو طريقة تذكّر بعد كل إجابة." enabled={settings.showExtraInfo} onToggle={() => updateSettings({ showExtraInfo: !settings.showExtraInfo })} />
+        </section>
+
+        <section className="settings-card settings-card--history reveal">
+          <div className="settings-card__head"><span>🧠</span><div><small>سجل التعلّم</small><h2>لا تكرار في الأسئلة</h2></div></div>
+          <div className="question-history-summary"><b>{formatNumber(seenQuestionCount)}</b><div><strong>سؤال في سجل عدم التكرار</strong><span>يتبقى {formatNumber(unseenQuestionCount)} سؤال جديد في بنك معارف.</span></div></div>
+          <p className="settings-card__note">يُحجز السؤال عند بدء الجولة كي لا يعود لك في جولة لاحقة، حتى إن خرجت من الجولة مبكرًا.</p>
+          <button className="button button--soft settings-card__button" type="button" onClick={resetQuestionHistory}>إعادة إتاحة الأسئلة <span>↻</span></button>
+        </section>
+
+        <section className="settings-card settings-card--safety reveal reveal--late">
+          <div className="settings-card__head"><span>📲</span><div><small>تطبيق معارف</small><h2>التثبيت والبيانات</h2></div></div>
+          <p className="settings-card__note">ثبّت معارف من المتصفح ليعمل كتطبيق مستقل، ثم افتح إعدادات التثبيت المناسبة لجهازك.</p>
+          <button className="button button--primary settings-card__button" type="button" onClick={openInstallOptions}>طريقة تثبيت التطبيق <span>↓</span></button>
+          <button className="settings-danger" type="button" onClick={resetProgress}>مسح النقاط والنتائج المحفوظة</button>
+        </section>
+      </div>
+    </div>
+  )
 }
 
 function ProfileView({ stats, level, progress, accuracy, counts, resetProgress, startGame }) {
@@ -949,7 +1353,7 @@ function StatCard({ icon, value, label, tone }) {
   return <div className={`stat-card stat-card--${tone}`}><span>{icon}</span><div><b>{value}</b><small>{label}</small></div></div>
 }
 
-function QuizView({ session, answerQuestion, nextQuestion, abandonSession }) {
+function QuizView({ session, showExtraInfo, answerQuestion, nextQuestion, abandonSession }) {
   const current = session.questions[session.currentIndex]
   const currentCategory = categoryMap[current.category] || categoryMap.science
   const selected = session.selectedAnswer
@@ -961,8 +1365,8 @@ function QuizView({ session, answerQuestion, nextQuestion, abandonSession }) {
     sprint: 'تحدي البرق',
     daily: 'تحدي اليوم',
   }[session.mode] || 'جلسة معرفة'
-  const autoAdvancePercent = selected
-    ? Math.max(0, Math.min(100, (session.autoAdvanceRemaining / AUTO_ADVANCE_MS) * 100))
+  const autoAdvancePercent = selected && session.autoAdvanceMs
+    ? Math.max(0, Math.min(100, (session.autoAdvanceRemaining / session.autoAdvanceMs) * 100))
     : 0
   const secondsToNext = Math.max(1, Math.ceil(session.autoAdvanceRemaining / 1000))
 
@@ -978,8 +1382,8 @@ function QuizView({ session, answerQuestion, nextQuestion, abandonSession }) {
         <div className="quiz-progress-row"><span>السؤال {formatNumber(session.currentIndex + 1)} من {formatNumber(session.questions.length)}</span><span>{formatNumber(session.score)} نقطة</span></div>
         <div className="quiz-progress"><i style={{ width: `${completedPercent}%` }} /></div>
 
-        <section className={`question-card ${selected ? (isCorrect ? 'is-correct' : 'is-wrong') : ''}`}>
-          <div className="question-card__top"><span className="question-number">{String(session.currentIndex + 1).padStart(2, '0')}</span><span className="question-emoji">{currentCategory.emoji}</span></div>
+        <section className={`question-card ${selected ? (isCorrect ? 'is-correct' : 'is-wrong') : ''}`} data-difficulty={current.difficulty} data-question-id={current.id}>
+          <div className="question-card__top"><div className="question-card__meta"><span className="question-number">{String(session.currentIndex + 1).padStart(2, '0')}</span><span className={`question-difficulty question-difficulty--${current.difficulty}`}>{DIFFICULTY_LABELS[current.difficulty] || 'متوسط'}</span></div><span className="question-emoji">{currentCategory.emoji}</span></div>
           <h1>{current.question}</h1>
           <div className="options-grid">
             {current.options.map((option, index) => {
@@ -994,7 +1398,9 @@ function QuizView({ session, answerQuestion, nextQuestion, abandonSession }) {
             })}
           </div>
           {selected && <div className={`answer-feedback ${isCorrect ? 'is-correct' : 'is-wrong'}`}><span>{isCorrect ? '🎉' : '💡'}</span><div><b>{isCorrect ? 'إجابة رائعة!' : 'ليست الإجابة الصحيحة هذه المرة.'}</b><p>{isCorrect ? 'أحسنت، أضفت نقاطًا جديدة إلى رصيدك.' : <>الإجابة الصحيحة: <strong>{current.answer}</strong></>}</p></div></div>}
-          {selected && <div className="auto-advance" role="status" aria-live="polite"><div className="auto-advance__row"><span>سيتم الانتقال تلقائيًا إلى السؤال التالي</span><b>خلال {formatNumber(secondsToNext)} ثوانٍ</b></div><div className="auto-advance__bar"><i style={{ width: `${autoAdvancePercent}%` }} /></div></div>}
+          {selected && showExtraInfo && <aside className="learning-note"><span>{current.additionalInfo?.icon || '💡'}</span><div><small>معلومة إضافية</small><b>{current.additionalInfo?.title || 'تثبيت المعلومة'}</b><p>{current.additionalInfo?.text}</p></div></aside>}
+          {selected && session.autoAdvanceEnabled && <div className="auto-advance" role="status" aria-live="polite"><div className="auto-advance__row"><span>سيتم الانتقال تلقائيًا إلى السؤال التالي</span><b>خلال {formatNumber(secondsToNext)} ثوانٍ</b></div><div className="auto-advance__bar"><i style={{ width: `${autoAdvancePercent}%` }} /></div></div>}
+          {selected && !session.autoAdvanceEnabled && <div className="manual-advance-note">الانتقال اليدوي مفعّل — اختر «السؤال التالي» عندما تكون جاهزًا.</div>}
         </section>
 
         <div className="quiz-actions"><div><span>{session.duration ? 'سرعة إجابتك تمنحك نقاطًا إضافية' : 'خذ وقتك وفكّر بهدوء'}</span></div>{selected && <button className="button button--primary" type="button" onClick={nextQuestion}>{session.currentIndex + 1 === session.questions.length ? 'عرض النتيجة' : 'السؤال التالي'} <span>←</span></button>}</div>
