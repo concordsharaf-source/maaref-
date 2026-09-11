@@ -260,7 +260,8 @@ function inferAnswerKind({ question, category, answer = '' }) {
 // بدائل احتياطية مدققة لنوع الإجابة. لا نستخدم بدائل عشوائية من فئة مختلفة.
 const fallbackOptions = {
   boolean: ['صحيح.', 'خطأ.'],
-  currency: ['الريال السعودي', 'الدينار الكويتي', 'الجنيه المصري', 'الدرهم الإماراتي', 'الين الياباني', 'اليورو', 'الدولار الأمريكي', 'الليرة التركية', 'الفرنك السويسري'],
+  // تسميات نقدية عامة تمنع تلميح اسم البلد داخل الاختيار نفسه.
+  currency: ['ريال', 'درهم', 'جنيه', 'دولار', 'يورو', 'ين', 'ليرة', 'فرنك', 'كرونة', 'روبية', 'بيزو', 'وون', 'شيكل', 'دينار'],
   country: ['مصر', 'السعودية', 'فرنسا', 'اليابان', 'كندا', 'المغرب', 'تركيا', 'البرازيل', 'الهند', 'أستراليا'],
   capital: ['القاهرة', 'الرياض', 'باريس', 'طوكيو', 'أوتاوا', 'الرباط', 'أنقرة', 'برازيليا', 'نيودلهي', 'كانبرا'],
   continent: ['آسيا', 'أفريقيا', 'أوروبا', 'أمريكا الشمالية', 'أمريكا الجنوبية', 'أوقيانوسيا', 'القارة القطبية الجنوبية'],
@@ -560,6 +561,13 @@ function uniqueRelatedAnswers(question) {
   })
 }
 
+// تعرض العملات باسم الفئة النقدية فقط داخل الخيارات. بهذا لا يفضح وصف مثل
+// «دينار أردني» إجابة سؤال الأردن، بينما تظل التسمية الرسمية الكاملة في التصحيح والشرح.
+function currencyOptionLabel(value = '') {
+  const firstWord = trimFact(value).split(/\s+/u)[0] || ''
+  return firstWord.replace(/^ال/u, '') || trimFact(value)
+}
+
 function selectProgressiveQuestions(pool, count, random) {
   const total = Math.min(count, pool.length)
   const buckets = Array.from({ length: 5 }, () => [])
@@ -582,11 +590,33 @@ function selectProgressiveQuestions(pool, count, random) {
 
 function createRound(question, random) {
   const expected = String(question.answer).trim()
-  const wrongOptions = shuffle(uniqueRelatedAnswers(question), random).slice(0, 3)
+  const relatedAnswers = question.answerKind === 'currency'
+    ? [
+        ...shuffle(fallbackOptions.currency || [], random),
+        ...shuffle(answerPools.get('currency') || [], random),
+      ]
+    : shuffle(uniqueRelatedAnswers(question), random)
+
+  if (question.answerKind === 'currency') {
+    const usedLabels = new Set([cleanAnswer(currencyOptionLabel(expected))])
+    const wrongOptions = relatedAnswers.filter((answer) => {
+      const labelKey = cleanAnswer(currencyOptionLabel(answer))
+      if (!labelKey || usedLabels.has(labelKey)) return false
+      usedLabels.add(labelKey)
+      return true
+    }).slice(0, 3)
+
+    return {
+      ...question,
+      // نحفظ القيمة الرسمية للتصحيح، لكن لا نعرض الصفة المرتبطة باسم البلد قبل الإجابة.
+      options: shuffle([expected, ...wrongOptions], random).map((value) => ({ value, label: currencyOptionLabel(value) })),
+    }
+  }
+
   return {
     ...question,
     // قد يظهر خياران أو ثلاثة فقط عندما لا توجد بدائل صحيحة من المجال نفسه؛ هذا أفضل من خيار غير ذي صلة.
-    options: shuffle([expected, ...wrongOptions], random),
+    options: shuffle([expected, ...relatedAnswers.slice(0, 3)], random),
   }
 }
 
@@ -1387,17 +1417,19 @@ function QuizView({ session, showExtraInfo, answerQuestion, nextQuestion, abando
           <h1>{current.question}</h1>
           <div className="options-grid">
             {current.options.map((option, index) => {
-              const optionCorrect = sameAnswer(option, current.answer)
-              const optionSelected = sameAnswer(option, selected)
+              const optionValue = typeof option === 'string' ? option : option.value
+              const optionLabel = typeof option === 'string' ? option : option.label
+              const optionCorrect = sameAnswer(optionValue, current.answer)
+              const optionSelected = sameAnswer(optionValue, selected)
               let className = 'option-button'
               if (selected) {
                 if (optionCorrect) className += ' is-correct'
                 else if (optionSelected) className += ' is-wrong'
               }
-              return <button key={`${option}-${index}`} type="button" disabled={Boolean(selected)} className={className} onClick={() => answerQuestion(option)}><span>{LETTERS[index]}</span><b>{option}</b><i>{selected && optionCorrect ? '✓' : selected && optionSelected ? '×' : ''}</i></button>
+              return <button key={`${optionValue}-${index}`} type="button" disabled={Boolean(selected)} className={className} onClick={() => answerQuestion(optionValue)}><span>{LETTERS[index]}</span><b>{optionLabel}</b><i>{selected && optionCorrect ? '✓' : selected && optionSelected ? '×' : ''}</i></button>
             })}
           </div>
-          {selected && <div className={`answer-feedback ${isCorrect ? 'is-correct' : 'is-wrong'}`}><span>{isCorrect ? '🎉' : '💡'}</span><div><b>{isCorrect ? 'إجابة رائعة!' : 'ليست الإجابة الصحيحة هذه المرة.'}</b><p>{isCorrect ? 'أحسنت، أضفت نقاطًا جديدة إلى رصيدك.' : <>الإجابة الصحيحة: <strong>{current.answer}</strong></>}</p></div></div>}
+          {selected && <div className={`answer-feedback ${isCorrect ? 'is-correct' : 'is-wrong'}`}><span>{isCorrect ? '🎉' : '💡'}</span><div><b>{isCorrect ? 'إجابة رائعة!' : 'ليست الإجابة الصحيحة هذه المرة.'}</b><p>{isCorrect ? <>أحسنت، أضفت نقاطًا جديدة إلى رصيدك.{current.answerKind === 'currency' && <> الاسم الرسمي للعملة: <strong>{current.answer}</strong>.</>}</> : <>الإجابة الصحيحة: <strong>{current.answer}</strong></>}</p></div></div>}
           {selected && showExtraInfo && <aside className="learning-note"><span>{current.additionalInfo?.icon || '💡'}</span><div><small>معلومة إضافية</small><b>{current.additionalInfo?.title || 'تثبيت المعلومة'}</b><p>{current.additionalInfo?.text}</p></div></aside>}
           {selected && session.autoAdvanceEnabled && <div className="auto-advance" role="status" aria-live="polite"><div className="auto-advance__row"><span>سيتم الانتقال تلقائيًا إلى السؤال التالي</span><b>خلال {formatNumber(secondsToNext)} ثوانٍ</b></div><div className="auto-advance__bar"><i style={{ width: `${autoAdvancePercent}%` }} /></div></div>}
           {selected && !session.autoAdvanceEnabled && <div className="manual-advance-note">الانتقال اليدوي مفعّل — اختر «السؤال التالي» عندما تكون جاهزًا.</div>}
