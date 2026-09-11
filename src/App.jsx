@@ -460,80 +460,6 @@ function Brand({ compact = false }) {
   )
 }
 
-function isAppleMobileDevice() {
-  if (typeof navigator === 'undefined') return false
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-}
-
-function isStandaloneApp() {
-  if (typeof window === 'undefined') return false
-  return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true
-}
-
-function InstallAppBanner({ onToast, onDismiss }) {
-  const [deferredPrompt, setDeferredPrompt] = useState(null)
-  const [isAppleMobile] = useState(isAppleMobileDevice)
-  const [isInstalled, setIsInstalled] = useState(isStandaloneApp)
-  const [showInstructions, setShowInstructions] = useState(false)
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (event) => {
-      event.preventDefault()
-      setDeferredPrompt(event)
-    }
-    const handleInstalled = () => {
-      setIsInstalled(true)
-      setDeferredPrompt(null)
-      onToast('تمت إضافة معارف إلى تطبيقات جهازك.')
-    }
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-    window.addEventListener('appinstalled', handleInstalled)
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-      window.removeEventListener('appinstalled', handleInstalled)
-    }
-  }, [onToast])
-
-  const requestInstall = async () => {
-    if (isAppleMobile || !deferredPrompt) {
-      setShowInstructions((current) => !current)
-      return
-    }
-
-    try {
-      await deferredPrompt.prompt()
-      const choice = await deferredPrompt.userChoice
-      setDeferredPrompt(null)
-      if (choice.outcome === 'accepted') onToast('يجري تثبيت معارف على جهازك.')
-    } catch {
-      setDeferredPrompt(null)
-    }
-  }
-
-  if (isInstalled) return null
-
-  const manualInstall = isAppleMobile || !deferredPrompt
-  const instructions = isAppleMobile
-    ? 'على آيفون أو آيباد: افتح زر المشاركة، ثم اختر «إضافة إلى الشاشة الرئيسية»، وبعدها «إضافة».'
-    : 'في Chrome أو Edge: افتح قائمة المتصفح ⋮ ثم اختر «تثبيت معارف» أو «إضافة إلى الشاشة الرئيسية».'
-
-  return (
-    <aside className="install-banner" aria-label="تثبيت تطبيق معارف">
-      <span className="install-banner__icon" aria-hidden="true">📲</span>
-      <div className="install-banner__copy">
-        <strong>ثبّت معارف كتطبيق</strong>
-        <p>{isAppleMobile ? 'أضِفه إلى الشاشة الرئيسية لفتحه كتطبيق مستقل.' : deferredPrompt ? 'افتحه سريعًا كتطبيق مستقل واستمر في التعلّم حتى عند انقطاع الإنترنت.' : 'معارف جاهز للتثبيت؛ اضغط لمعرفة الخطوة المناسبة لمتصفحك.'}</p>
-        {showInstructions && <p className="install-banner__instructions"><b>طريقة التثبيت:</b> {instructions}</p>}
-      </div>
-      <div className="install-banner__actions">
-        <button className="button button--primary" type="button" onClick={requestInstall}>{manualInstall ? 'طريقة التثبيت' : 'تثبيت التطبيق'} <span>↓</span></button>
-        <button className="install-banner__close" type="button" onClick={onDismiss} aria-label="إغلاق اقتراح تثبيت معارف">×</button>
-      </div>
-    </aside>
-  )
-}
-
 function App() {
   const [view, setView] = useState('home')
   const [stats, setStats] = useState(readStats)
@@ -542,7 +468,6 @@ function App() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [toast, setToast] = useState('')
   const [settings, setSettings] = useState(readSettings)
-  const [installBannerDismissed, setInstallBannerDismissed] = useState(false)
   const [isTimerPaused, setIsTimerPaused] = useState(false)
 
   const categoryCounts = useMemo(() => {
@@ -800,11 +725,6 @@ function App() {
 
   const updateSettings = (changes) => setSettings((previous) => ({ ...previous, ...changes }))
 
-  const openInstallOptions = () => {
-    setInstallBannerDismissed(false)
-    navigate('home')
-  }
-
   const navItems = [
     { id: 'home', label: 'الرئيسية', icon: '⌂' },
     { id: 'categories', label: 'الفئات', icon: '◫' },
@@ -897,7 +817,6 @@ function App() {
             unseenQuestionCount={unseenQuestionCount}
             resetQuestionHistory={resetQuestionHistory}
             resetProgress={resetProgress}
-            openInstallOptions={openInstallOptions}
           />
         )}
         {view === 'quiz' && session && (
@@ -929,8 +848,6 @@ function App() {
           ))}
         </nav>
       )}
-
-      {view === 'home' && !installBannerDismissed && <InstallAppBanner onToast={setToast} onDismiss={() => setInstallBannerDismissed(true)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   )
@@ -1155,7 +1072,7 @@ function SettingsSegment({ label, description, value, choices, onChange }) {
   )
 }
 
-function SettingsView({ settings, updateSettings, seenQuestionCount, unseenQuestionCount, resetQuestionHistory, resetProgress, openInstallOptions }) {
+function SettingsView({ settings, updateSettings, seenQuestionCount, unseenQuestionCount, resetQuestionHistory, resetProgress }) {
   return (
     <div className="page-width settings-page">
       <section className="settings-hero reveal">
@@ -1205,8 +1122,8 @@ function SettingsView({ settings, updateSettings, seenQuestionCount, unseenQuest
 
         <section className="settings-card settings-card--safety reveal reveal--late">
           <div className="settings-card__head"><span>📲</span><div><small>تطبيق معارف</small><h2>التثبيت والبيانات</h2></div></div>
-          <p className="settings-card__note">ثبّت معارف من المتصفح ليعمل كتطبيق مستقل، ثم افتح إعدادات التثبيت المناسبة لجهازك.</p>
-          <button className="button button--primary settings-card__button" type="button" onClick={openInstallOptions}>طريقة تثبيت التطبيق <span>↓</span></button>
+          <p className="settings-card__note">يُثبّت معارف من قائمة المتصفح ليعمل كتطبيق مستقل؛ لا يظهر زر تثبيت في الصفحة الرئيسية.</p>
+          <div className="settings-install-guide" aria-label="طريقة تثبيت التطبيق"><b>ثبّته من قائمة المتصفح</b><p>Chrome أو Edge: افتح قائمة المتصفح ⋮ ثم اختر «تثبيت معارف» أو «إضافة إلى الشاشة الرئيسية».</p><p>آيفون وآيباد: افتح زر المشاركة ثم اختر «إضافة إلى الشاشة الرئيسية».</p></div>
           <button className="settings-danger" type="button" onClick={resetProgress}>مسح النقاط والنتائج المحفوظة</button>
         </section>
       </div>
