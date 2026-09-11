@@ -139,6 +139,11 @@ function inferNatureTopic(text) {
   return 'ecology'
 }
 
+function isFemalePersonQuestion(text = '') {
+  return /(^|\s)من هي(?:\s|$)/u.test(text)
+    || /(والدة|زوجة|أم النبي|ام النبي|ابنة|بنت|امرأة|المرأة|مؤلفة|كاتبة|فنانة|ممثلة|مخرجة|عالمة|شاعرة|ملكة)/u.test(text)
+}
+
 // يحدد نوع الإجابة المطلوب من صياغة السؤال، فلا تختلط العملات بالعواصم أو التعريفات بالأسماء.
 function inferAnswerKind({ question, category, answer = '' }) {
   const text = normalizeQuestion(question)
@@ -231,7 +236,9 @@ function inferAnswerKind({ question, category, answer = '' }) {
     if (text.includes('في أي شهر') || text.includes('ما الشهر') || text.includes('ما أول شهور')) return 'religion-month'
     if (text.includes('ما العيد')) return 'religion-eid'
     if (text.includes('ما السورة') || text.includes('ما أول سورة') || text.includes('ما أطول سورة') || text.includes('ما السورتان')) return 'religion-surah'
-    if (text.includes('أي نبي') || text.startsWith('من هو') || text.startsWith('من هي') || text.includes('أول البشر') || text.includes('زوجة آدم') || text.includes('ابن إبراهيم') || text.includes('أم النبي')) return 'religion-person'
+    if (text.includes('أي نبي') || text.startsWith('من هو') || text.startsWith('من هي') || text.includes('أول البشر') || text.includes('زوجة آدم') || text.includes('ابن إبراهيم') || text.includes('أم النبي')) {
+      return isFemalePersonQuestion(text) ? 'religion-female-person' : 'religion-person'
+    }
     if (text.includes('ما المسجد') || text.includes('من أي مسجد') || text.includes('أي مسجد') || text.includes('أول مسجد') || text.includes('القبلة الأولى')) return 'religion-mosque'
     if (text.includes('ما الركن')) return 'religion-pillar'
     if (text.includes('إلى أي جهة')) return 'religion-direction'
@@ -287,7 +294,9 @@ const fallbackOptions = {
   'religion-month': ['محرم', 'رمضان', 'شوال', 'ذو الحجة', 'صفر', 'ربيع الأول', 'رجب'],
   'religion-eid': ['عيد الفطر', 'عيد الأضحى'],
   'religion-surah': ['سورة الفاتحة', 'سورة البقرة', 'سورة الإخلاص', 'سورة مريم', 'سورتا الفلق والناس'],
-  'religion-person': ['النبي محمد صلى الله عليه وسلم', 'نوح عليه السلام', 'إبراهيم عليه السلام', 'موسى عليه السلام', 'عيسى عليه السلام', 'يوسف عليه السلام', 'يونس عليه السلام', 'مريم عليها السلام'],
+  'religion-person': ['النبي محمد صلى الله عليه وسلم', 'نوح عليه السلام', 'إبراهيم عليه السلام', 'موسى عليه السلام', 'عيسى عليه السلام', 'يوسف عليه السلام', 'يونس عليه السلام', 'داود عليه السلام', 'أيوب عليه السلام'],
+  // عند السؤال عن امرأة تظل البدائل أسماء نساء فقط، لا أسماء رجال.
+  'religion-female-person': ['مريم عليها السلام', 'هاجر عليها السلام', 'حواء عليها السلام', 'آسية بنت مزاحم', 'خديجة بنت خويلد', 'فاطمة بنت محمد'],
   'religion-mosque': ['المسجد الحرام', 'المسجد النبوي', 'المسجد الأقصى', 'مسجد قباء'],
   'religion-pillar': ['الشهادتان', 'الصلاة', 'الزكاة', 'الصيام', 'الحج'],
   'religion-direction': ['الكعبة المشرفة', 'المسجد الأقصى'],
@@ -307,6 +316,91 @@ const fallbackOptions = {
   'religion-night': ['ليلة القدر', 'ليلة الإسراء والمعراج', 'ليلة النصف من شعبان'],
   'religion-practice': ['الوضوء', 'الطواف', 'السعي', 'الإحرام', 'الركوع', 'السجود'],
   'religion-definition': ['الجهة التي يتوجه إليها المسلم في الصلاة', 'الإقرار بوحدانية الله ورسالة محمد'],
+}
+
+// شروح قصيرة مرتبطة بكل سؤال إسلامي، حتى لا تتحول بطاقة «المعلومة الإضافية» إلى نص عام مكرر.
+const religionLearningNotes = {
+  'islamic-10001': { title: 'كتاب الإسلام', text: 'القرآن الكريم هو كتاب المسلمين، ويُقسَّم إلى ثلاثين جزءًا لتيسير القراءة والمراجعة.' },
+  'islamic-10002': { title: 'أركان الإسلام', text: 'الأركان خمسة: الشهادتان، الصلاة، الزكاة، الصيام، والحج.' },
+  'islamic-10003': { title: 'أول الأركان', text: 'الشهادتان هما الركن الأول من أركان الإسلام، وتجمعان الإيمان بوحدانية الله ورسالة محمد ﷺ.' },
+  'islamic-10004': { title: 'عبادة يومية', text: 'الصلاة فريضة تتكرر خمس مرات يوميًا، وهي الركن العملي المتكرر في يوم المسلم.' },
+  'islamic-10005': { title: 'حق مالي واجب', text: 'الزكاة عبادة مالية تؤدى بشروطها، وتصل إلى المستحقين وتطهر المال.' },
+  'islamic-10006': { title: 'صيام رمضان', text: 'الصيام ركن من أركان الإسلام، ويكون في شهر رمضان من الفجر إلى غروب الشمس.' },
+  'islamic-10007': { title: 'حج المستطيع', text: 'الحج يقصده المسلم القادر إلى مكة، ويجب مرة واحدة في العمر لمن استطاع إليه سبيلًا.' },
+  'islamic-10008': { title: 'الصلوات المفروضة', text: 'الصلوات الخمس هي: الفجر، الظهر، العصر، المغرب، والعشاء.' },
+  'islamic-10009': { title: 'قبلة المسلمين', text: 'الكعبة المشرفة تقع في المسجد الحرام بمكة، ويتجه إليها المسلمون في صلاتهم.' },
+  'islamic-10010': { title: 'مكة المكرمة', text: 'في مكة المسجد الحرام والكعبة المشرفة، وهي مقصد الحج والعمرة.' },
+  'islamic-10011': { title: 'المدينة المنورة', text: 'يقع المسجد النبوي في المدينة المنورة، وهي مدينة هجرة النبي محمد ﷺ.' },
+  'islamic-10012': { title: 'المسجد الأقصى', text: 'يقع المسجد الأقصى في القدس، وهو أولى القبلتين وثالث المساجد التي تُشد إليها الرحال.' },
+  'islamic-10013': { title: 'شهر الصيام', text: 'رمضان هو الشهر التاسع هجريًا، وفيه يصوم المسلمون ويكثرون من العبادة.' },
+  'islamic-10014': { title: 'فرحة ختام الصيام', text: 'يأتي عيد الفطر بعد اكتمال صيام رمضان، وتسبقه زكاة الفطر.' },
+  'islamic-10015': { title: 'عيد موسم الحج', text: 'يأتي عيد الأضحى في أيام الحج، ويرتبط بأضحية العيد لمن قدر عليها.' },
+  'islamic-10016': { title: 'بداية السنة الهجرية', text: 'محرم هو أول شهور السنة الهجرية، وهي سنة تعتمد على التقويم القمري.' },
+  'islamic-10017': { title: 'سنة قمرية', text: 'السنة الهجرية تتكون من اثني عشر شهرًا قمريًا.' },
+  'islamic-10018': { title: 'بداية التأريخ الهجري', text: 'يبدأ التأريخ الهجري بهجرة النبي محمد ﷺ من مكة إلى المدينة المنورة.' },
+  'islamic-10019': { title: 'ملك الوحي', text: 'جبريل عليه السلام هو الملك الذي نزل بالوحي على الأنبياء، ومنهم النبي محمد ﷺ.' },
+  'islamic-10020': { title: 'فاتحة الكتاب', text: 'سورة الفاتحة أول سورة في ترتيب المصحف، وتُقرأ في كل ركعة من الصلاة.' },
+  'islamic-10021': { title: 'أطول سور القرآن', text: 'سورة البقرة هي أطول سور القرآن الكريم، وترتيبها الثاني في المصحف.' },
+  'islamic-10022': { title: 'أجزاء القرآن', text: 'يقسم القرآن الكريم إلى ثلاثين جزءًا، ويضم كل جزء حزبين.' },
+  'islamic-10023': { title: 'لغة الوحي', text: 'نزل القرآن الكريم باللغة العربية، ثم نُقلت معانيه إلى لغات كثيرة.' },
+  'islamic-10024': { title: 'خاتم الأنبياء', text: 'النبي محمد ﷺ هو خاتم الأنبياء في الإسلام.' },
+  'islamic-10025': { title: 'مولد النبي', text: 'وُلد النبي محمد ﷺ في مكة المكرمة قبل الهجرة إلى المدينة.' },
+  'islamic-10026': { title: 'مدينة الهجرة', text: 'هاجر النبي محمد ﷺ من مكة إلى المدينة المنورة، ومنها بدأ التأريخ الهجري.' },
+  'islamic-10027': { title: 'رحلة الإسراء', text: 'الإسراء هو انتقال النبي محمد ﷺ ليلًا من المسجد الحرام إلى المسجد الأقصى.' },
+  'islamic-10028': { title: 'بداية الإسراء', text: 'بدأت رحلة الإسراء من المسجد الحرام في مكة وانتهت إلى المسجد الأقصى.' },
+  'islamic-10029': { title: 'ماء زمزم', text: 'بئر زمزم بئر مشهورة قريبة من الكعبة المشرفة في المسجد الحرام.' },
+  'islamic-10030': { title: 'شهر الحج', text: 'يؤدى الحج في شهر ذي الحجة، وهو آخر شهور السنة الهجرية.' },
+  'islamic-10031': { title: 'يوم عرفة', text: 'الوقوف بعرفة يكون في اليوم التاسع من ذي الحجة، وهو من أعظم مناسك الحج.' },
+  'islamic-10032': { title: 'تهيؤ للصلاة', text: 'الوضوء طهارة بالماء تسبق الصلاة غالبًا، وله فرائض وآداب معروفة.' },
+  'islamic-10033': { title: 'نداء الصلاة', text: 'الأذان نداء يعلن دخول وقت الصلاة ويدعو الناس إليها.' },
+  'islamic-10034': { title: 'مهمة المؤذن', text: 'المؤذن هو من يرفع الأذان لإعلام الناس بدخول وقت الصلاة.' },
+  'islamic-10035': { title: 'يوم الجمعة', text: 'تقام صلاة الجمعة في يوم الجمعة، وهي شعيرة أسبوعية للمسلمين.' },
+  'islamic-10036': { title: 'ليالي رمضان', text: 'تُطلب ليلة القدر في العشر الأواخر من رمضان، ولا سيما الليالي الوترية.' },
+  'islamic-10037': { title: 'زكاة الفطر', text: 'تُخرج زكاة الفطر قبل صلاة عيد الفطر لتصل إلى مستحقيها في وقتها.' },
+  'islamic-10038': { title: 'الطواف', text: 'الطواف هو الدوران حول الكعبة سبعة أشواط في الحج أو العمرة.' },
+  'islamic-10039': { title: 'شعيرة السعي', text: 'يكون السعي سبعة أشواط بين الصفا والمروة ضمن الحج أو العمرة.' },
+  'islamic-10040': { title: 'بداية النسك', text: 'الإحرام هو نية الدخول في النسك مع الالتزام بمحظورات مخصوصة.' },
+  'islamic-10041': { title: 'بداية الفجر', text: 'يبدأ وقت الفجر عند طلوع الفجر الصادق قبل شروق الشمس.' },
+  'islamic-10042': { title: 'وقت المغرب', text: 'يدخل وقت صلاة المغرب بعد غروب الشمس مباشرة.' },
+  'islamic-10043': { title: 'فريضة الفجر', text: 'فريضة الفجر ركعتان، وتسبقها سنة مؤكدة ركعتان.' },
+  'islamic-10044': { title: 'فريضة الظهر', text: 'عدد ركعات الظهر المفروضة أربع ركعات.' },
+  'islamic-10045': { title: 'فريضة العصر', text: 'عدد ركعات العصر المفروضة أربع ركعات.' },
+  'islamic-10046': { title: 'فريضة المغرب', text: 'عدد ركعات المغرب المفروضة ثلاث ركعات.' },
+  'islamic-10047': { title: 'فريضة العشاء', text: 'عدد ركعات العشاء المفروضة أربع ركعات.' },
+  'islamic-10048': { title: 'ركن في الصلاة', text: 'الركوع هو الانحناء في الصلاة بعد القراءة، ويأتي قبل السجود.' },
+  'islamic-10049': { title: 'موضع السجود', text: 'السجود هو وضع الجبهة على الأرض لله، ويأتي بعد الركوع في الصلاة.' },
+  'islamic-10050': { title: 'البسملة', text: 'تبدأ معظم سور القرآن بعبارة بسم الله الرحمن الرحيم، باستثناء سورة التوبة.' },
+  'islamic-10051': { title: 'المعوذتان', text: 'المعوذتان هما سورتا الفلق والناس، وتُقرآن للاستعاذة بالله.' },
+  'islamic-10052': { title: 'سفينة نوح', text: 'صنع نوح عليه السلام السفينة بأمر الله، وهي من أشهر قصص الأنبياء في القرآن.' },
+  'islamic-10053': { title: 'خليل الله', text: 'لقب خليل الله يطلق على إبراهيم عليه السلام.' },
+  'islamic-10054': { title: 'كتاب موسى', text: 'أنزلت التوراة على موسى عليه السلام.' },
+  'islamic-10055': { title: 'كتاب داود', text: 'أنزل الزبور على داود عليه السلام.' },
+  'islamic-10056': { title: 'كتاب عيسى', text: 'أنزل الإنجيل على عيسى عليه السلام.' },
+  'islamic-10057': { title: 'تعبير الرؤى', text: 'اشتهر يوسف عليه السلام بتعبير الرؤى، ومن قصصه رؤيا الملك في القرآن.' },
+  'islamic-10058': { title: 'قصة يونس', text: 'ابتلع الحوت يونس عليه السلام ثم نجا بعد أن دعا الله.' },
+  'islamic-10059': { title: 'مثال الصبر', text: 'يضرب المثل بصبر أيوب عليه السلام عند الشدائد.' },
+  'islamic-10060': { title: 'مريم وعيسى', text: 'مريم عليها السلام هي والدة عيسى عليه السلام، وتحمل إحدى سور القرآن اسمها.' },
+  'islamic-10061': { title: 'والد إسماعيل', text: 'إبراهيم عليه السلام والد إسماعيل عليه السلام، ويرتبط اسمه ببناء الكعبة مع ابنه إسماعيل.' },
+  'islamic-10062': { title: 'إسحاق وإبراهيم', text: 'إسحاق عليه السلام من أبناء إبراهيم عليه السلام المذكورين في القرآن.' },
+  'islamic-10063': { title: 'هاجر وإسماعيل', text: 'هاجر عليها السلام أم إسماعيل في التراث الإسلامي، ويرتبط السعي بين الصفا والمروة بقصتها.' },
+  'islamic-10064': { title: 'أبو البشر', text: 'آدم عليه السلام هو أول البشر في الإسلام.' },
+  'islamic-10065': { title: 'حواء وآدم', text: 'حواء هي زوجة آدم في التراث الإسلامي.' },
+  'islamic-10066': { title: 'معنى الإخلاص', text: 'سورة الإخلاص تؤكد توحيد الله وتنزيهه، وهي من قصار السور.' },
+  'islamic-10067': { title: 'معنى القبلة', text: 'القبلة هي الجهة التي يتجه إليها المسلم في الصلاة، وهي جهة الكعبة المشرفة.' },
+  'islamic-10068': { title: 'التقويم الهجري', text: 'التقويم الهجري قمري؛ لذلك تتغير مواسمه بالنسبة إلى السنة الميلادية.' },
+  'islamic-10069': { title: 'طول رمضان', text: 'شهر رمضان شهر قمري، لذلك يكون تسعة وعشرين أو ثلاثين يومًا.' },
+  'islamic-10070': { title: 'شرط الحج', text: 'الاستطاعة هي الشرط العام لوجوب الحج، وتشمل القدرة المالية والبدنية وأمن الطريق.' },
+  'islamic-10071': { title: 'ما يفطر الصائم', text: 'المفطرات هي ما يفسد الصيام، ومن أمثلتها الأكل والشرب عمدًا في وقت الصوم.' },
+  'islamic-10072': { title: 'ثمرة الصيام', text: 'الصيام ليس امتناعًا عن الطعام فقط؛ ومن مقاصده تهذيب النفس وتقوية التقوى.' },
+  'islamic-10073': { title: 'مسجد قباء', text: 'مسجد قباء من المساجد المرتبطة بهجرة النبي ﷺ إلى المدينة المنورة.' },
+  'islamic-10074': { title: 'المسجد الحرام', text: 'المسجد الحرام في مكة يضم الكعبة المشرفة، وهو قبلة المسلمين.' },
+  'islamic-10075': { title: 'المسجد النبوي', text: 'بنى النبي محمد ﷺ المسجد النبوي في المدينة المنورة بعد الهجرة.' },
+  'islamic-10076': { title: 'الاعتكاف', text: 'المعتكف هو من يلزم المسجد للعبادة مدة من الزمن.' },
+  'islamic-10077': { title: 'عبارة الدخول في الإسلام', text: 'الشهادتان تتضمنان الشهادة أن لا إله إلا الله وأن محمدًا رسول الله.' },
+  'islamic-10078': { title: 'الشهادتان: أصل الإيمان', text: 'الشهادتان هما الركن الأول من أركان الإسلام، وتجمعان الإيمان بوحدانية الله ورسالة محمد ﷺ.' },
+  'islamic-10079': { title: 'سورة مريم', text: 'سميت سورة مريم بهذا الاسم لورود قصة مريم عليها السلام فيها بتفصيل.' },
+  'islamic-10080': { title: 'ليلة القدر', text: 'ليلة القدر ليلة مباركة من ليالي رمضان، ونزل فيها القرآن كما ورد في القرآن الكريم.' },
+  'islamic-10081': { title: 'القبلة الأولى', text: 'كان المسجد الأقصى القبلة الأولى للمسلمين قبل التحول إلى الكعبة المشرفة.' },
 }
 
 function clamp(value, minimum, maximum) {
@@ -519,7 +613,11 @@ function buildAdditionalInfo(question) {
     return { icon: '🧮', title: 'تثبيت الحل', text: 'اكتب العملية على خطوات قصيرة ثم راجع الناتج بالعملية العكسية عند الإمكان.' }
   }
 
-  if (question.category === 'religion') return { icon: '🕌', title: 'تثبيت المعلومة', text: `اربط «${answer}» بسياق العبادة أو الحدث المذكور في السؤال لتبقى المعلومة مترابطة.` }
+  if (question.category === 'religion') {
+    const note = religionLearningNotes[question.id]
+    if (note) return { icon: '🕌', ...note }
+    return { icon: '🕌', title: 'مراجعة إسلامية', text: `الإجابة الصحيحة هي «${answer}». راجع معناها مع سياق السؤال لتثبيت الفكرة.` }
+  }
   if (question.category === 'language') return { icon: '✍️', title: 'تطبيق لغوي', text: 'استخدم المصطلح في جملة من إنشائك؛ التطبيق القصير أسرع طريقة لتثبيت المفاهيم اللغوية.' }
   if (question.category === 'nature') return { icon: '🌿', title: 'رابط طبيعي', text: 'تأمل الوظيفة أو البيئة أو الصفة المرتبطة بالمفهوم؛ العلاقات تساعد على فهم الطبيعة لا حفظها فقط.' }
   if (question.category === 'history') return { icon: '🏛️', title: 'رابط تاريخي', text: 'ضع الحدث أو المصطلح داخل سياقه الزمني؛ معرفة ما قبله وما بعده تجعل التاريخ أسهل تذكرًا.' }
@@ -730,6 +828,7 @@ function App() {
   const [toast, setToast] = useState('')
   const [settings, setSettings] = useState(readSettings)
   const [installBannerDismissed, setInstallBannerDismissed] = useState(false)
+  const [isTimerPaused, setIsTimerPaused] = useState(false)
 
   const categoryCounts = useMemo(() => {
     const counts = Object.fromEntries(categories.map((category) => [category.id, 0]))
@@ -764,6 +863,45 @@ function App() {
     return () => window.clearTimeout(timeout)
   }, [toast])
 
+  // يتوقف عداد الجولة والانتقال التلقائي عند فتح نافذة تثبيت التطبيق أو مغادرة الصفحة مؤقتًا.
+  useEffect(() => {
+    if (!session) {
+      setIsTimerPaused(false)
+      return undefined
+    }
+
+    const pauseTimers = () => {
+      setIsTimerPaused(true)
+      setSession((current) => {
+        if (!current || current.timersPausedAt) return current
+        return { ...current, timersPausedAt: Date.now() }
+      })
+    }
+    const resumeTimers = () => {
+      if (document.hidden) return
+      setSession((current) => {
+        if (!current?.timersPausedAt) return current
+        const pausedFor = Math.max(0, Date.now() - current.timersPausedAt)
+        return {
+          ...current,
+          timersPausedAt: 0,
+          autoAdvanceUntil: current.autoAdvanceUntil ? current.autoAdvanceUntil + pausedFor : 0,
+        }
+      })
+      setIsTimerPaused(false)
+    }
+    const handleVisibility = () => (document.hidden ? pauseTimers() : resumeTimers())
+
+    document.addEventListener('visibilitychange', handleVisibility)
+    window.addEventListener('blur', pauseTimers)
+    window.addEventListener('focus', resumeTimers)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener('blur', pauseTimers)
+      window.removeEventListener('focus', resumeTimers)
+    }
+  }, [Boolean(session)])
+
   const navigate = (nextView) => {
     setView(nextView)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -786,6 +924,7 @@ function App() {
     })
 
     const autoAdvanceMs = settings.autoAdvance ? settings.autoAdvanceSeconds * 1000 : 0
+    setIsTimerPaused(false)
     setResult(null)
     setSession({
       mode,
@@ -804,6 +943,7 @@ function App() {
       autoAdvanceMs,
       autoAdvanceUntil: 0,
       autoAdvanceRemaining: 0,
+      timersPausedAt: 0,
       questions: rounds,
       config: { mode, category, count, duration, daily },
     })
@@ -829,13 +969,14 @@ function App() {
         [categoryId]: previous.categoryStats?.[categoryId] || { answered: 0, correct: 0 },
       },
     }))
+    setIsTimerPaused(false)
     setSession(null)
     setResult(finished)
     navigate('results')
   }
 
   useEffect(() => {
-    if (!session || !session.duration) return undefined
+    if (!session || !session.duration || isTimerPaused) return undefined
     if (session.secondsLeft <= 0) {
       finishSession('time')
       return undefined
@@ -844,7 +985,7 @@ function App() {
       setSession((current) => current ? { ...current, secondsLeft: current.secondsLeft - 1 } : current)
     }, 1000)
     return () => window.clearTimeout(timer)
-  }, [session?.secondsLeft, session?.duration])
+  }, [session?.secondsLeft, session?.duration, isTimerPaused])
 
   const answerQuestion = (answer) => {
     if (!session || session.selectedAnswer) return
@@ -900,7 +1041,7 @@ function App() {
 
   // بعد الإجابة يبدأ العداد بالمدة التي اختارها اللاعب؛ يبقى زر «التالي» متاحًا للانتقال الفوري.
   useEffect(() => {
-    if (!session?.selectedAnswer || !session.autoAdvanceUntil) return undefined
+    if (isTimerPaused || !session?.selectedAnswer || !session.autoAdvanceUntil) return undefined
 
     let hasAdvanced = false
     const tick = () => {
@@ -918,10 +1059,11 @@ function App() {
     tick()
     const countdown = window.setInterval(tick, 100)
     return () => window.clearInterval(countdown)
-  }, [session?.selectedAnswer, session?.currentIndex, session?.autoAdvanceUntil])
+  }, [session?.selectedAnswer, session?.currentIndex, session?.autoAdvanceUntil, isTimerPaused])
 
   const abandonSession = () => {
     if (window.confirm('هل تريد إنهاء هذه الجلسة دون حفظ نتيجتها؟')) {
+      setIsTimerPaused(false)
       setSession(null)
       navigate('home')
     }
@@ -1046,6 +1188,7 @@ function App() {
         {view === 'quiz' && session && (
           <QuizView
             session={session}
+            timerPaused={isTimerPaused}
             showExtraInfo={settings.showExtraInfo}
             answerQuestion={answerQuestion}
             nextQuestion={nextQuestion}
@@ -1178,16 +1321,31 @@ function SectionHeading({ overline, title, action, onAction }) {
 }
 
 function CategoryCard({ category, count, onStart, detailed = false }) {
+  const openCategory = () => onStart('practice')
+  const handleCardKeyDown = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      openCategory()
+    }
+  }
+  const cardInteraction = detailed ? {} : {
+    role: 'button',
+    tabIndex: 0,
+    'aria-label': `ابدأ تدريبًا في فئة ${category.title}`,
+    onClick: openCategory,
+    onKeyDown: handleCardKeyDown,
+  }
+
   return (
-    <article className={`category-card ${detailed ? 'category-card--detailed' : ''}`} style={{ '--accent': category.accent, '--glow': category.glow }}>
+    <article className={`category-card ${detailed ? 'category-card--detailed' : ''}`} style={{ '--accent': category.accent, '--glow': category.glow }} {...cardInteraction}>
       <div className="category-card__top"><span className="category-card__emoji">{category.emoji}</span><span className="category-card__dots">•••</span></div>
       <h3>{category.title}</h3>
       <p>{category.description}</p>
       <div className="category-card__bottom">
         <span>{formatNumber(count || 0)} سؤال</span>
-        <button type="button" onClick={onStart} aria-label={`ابدأ فئة ${category.title}`}>ابدأ <b>←</b></button>
+        {detailed ? <button type="button" onClick={() => onStart('practice')} aria-label={`ابدأ فئة ${category.title}`}>ابدأ <b>←</b></button> : <span className="category-card__start" aria-hidden="true">ابدأ <b>←</b></span>}
       </div>
-      {detailed && <div className="category-card__detail-actions"><button type="button" onClick={onStart}>تدريب حر</button><button type="button" onClick={() => onStart('test')}>اختبار سريع</button></div>}
+      {detailed && <div className="category-card__detail-actions"><button type="button" onClick={() => onStart('practice')}>تدريب حر</button><button type="button" onClick={() => onStart('test')}>اختبار سريع</button></div>}
     </article>
   )
 }
@@ -1383,7 +1541,7 @@ function StatCard({ icon, value, label, tone }) {
   return <div className={`stat-card stat-card--${tone}`}><span>{icon}</span><div><b>{value}</b><small>{label}</small></div></div>
 }
 
-function QuizView({ session, showExtraInfo, answerQuestion, nextQuestion, abandonSession }) {
+function QuizView({ session, timerPaused, showExtraInfo, answerQuestion, nextQuestion, abandonSession }) {
   const current = session.questions[session.currentIndex]
   const currentCategory = categoryMap[current.category] || categoryMap.science
   const selected = session.selectedAnswer
@@ -1399,13 +1557,14 @@ function QuizView({ session, showExtraInfo, answerQuestion, nextQuestion, abando
     ? Math.max(0, Math.min(100, (session.autoAdvanceRemaining / session.autoAdvanceMs) * 100))
     : 0
   const secondsToNext = Math.max(1, Math.ceil(session.autoAdvanceRemaining / 1000))
+  const timerIsPaused = timerPaused && Boolean(session.duration)
 
   return (
     <div className="quiz-shell">
       <header className="quiz-header page-width">
         <button type="button" className="quiz-exit" onClick={abandonSession}>× <span>إنهاء</span></button>
         <div className="quiz-category"><span>{currentCategory.emoji}</span><div><small>{modeLabel}</small><b>{currentCategory.title}</b></div></div>
-        <div className={`quiz-timer ${session.duration && session.secondsLeft <= 20 ? 'is-urgent' : ''}`}><span>{session.duration ? '⏱' : '∞'}</span><b>{session.duration ? formatTime(session.secondsLeft) : 'بدون وقت'}</b></div>
+        <div className={`quiz-timer ${session.duration && session.secondsLeft <= 20 && !timerIsPaused ? 'is-urgent' : ''} ${timerIsPaused ? 'is-paused' : ''}`} aria-live="polite"><span>{timerIsPaused ? '⏸' : session.duration ? '⏱' : '∞'}</span><div><b>{session.duration ? formatTime(session.secondsLeft) : 'بدون وقت'}</b>{timerIsPaused && <small>متوقف مؤقتًا</small>}</div></div>
       </header>
 
       <main className="quiz-content page-width">
@@ -1431,7 +1590,7 @@ function QuizView({ session, showExtraInfo, answerQuestion, nextQuestion, abando
           </div>
           {selected && <div className={`answer-feedback ${isCorrect ? 'is-correct' : 'is-wrong'}`}><span>{isCorrect ? '🎉' : '💡'}</span><div><b>{isCorrect ? 'إجابة رائعة!' : 'ليست الإجابة الصحيحة هذه المرة.'}</b><p>{isCorrect ? <>أحسنت، أضفت نقاطًا جديدة إلى رصيدك.{current.answerKind === 'currency' && <> الاسم الرسمي للعملة: <strong>{current.answer}</strong>.</>}</> : <>الإجابة الصحيحة: <strong>{current.answer}</strong></>}</p></div></div>}
           {selected && showExtraInfo && <aside className="learning-note"><span>{current.additionalInfo?.icon || '💡'}</span><div><small>معلومة إضافية</small><b>{current.additionalInfo?.title || 'تثبيت المعلومة'}</b><p>{current.additionalInfo?.text}</p></div></aside>}
-          {selected && session.autoAdvanceEnabled && <div className="auto-advance" role="status" aria-live="polite"><div className="auto-advance__row"><span>سيتم الانتقال تلقائيًا إلى السؤال التالي</span><b>خلال {formatNumber(secondsToNext)} ثوانٍ</b></div><div className="auto-advance__bar"><i style={{ width: `${autoAdvancePercent}%` }} /></div></div>}
+          {selected && session.autoAdvanceEnabled && <div className="auto-advance" role="status" aria-live="polite"><div className="auto-advance__row"><span>سيتم الانتقال تلقائيًا إلى السؤال التالي</span><b>{timerPaused ? 'متوقف مؤقتًا' : `خلال ${formatNumber(secondsToNext)} ثوانٍ`}</b></div><div className="auto-advance__bar"><i style={{ width: `${autoAdvancePercent}%` }} /></div></div>}
           {selected && !session.autoAdvanceEnabled && <div className="manual-advance-note">الانتقال اليدوي مفعّل — اختر «السؤال التالي» عندما تكون جاهزًا.</div>}
         </section>
 
